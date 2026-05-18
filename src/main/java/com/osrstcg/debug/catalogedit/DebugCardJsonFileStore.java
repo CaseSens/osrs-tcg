@@ -1,7 +1,6 @@
 package com.osrstcg.debug.catalogedit;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -24,13 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 final class DebugCardJsonFileStore
 {
-	private final Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
+	private final Gson prettyGson;
 	private final DebugCardJsonPaths paths;
 
 	@Inject
-	DebugCardJsonFileStore(DebugCardJsonPaths paths)
+	DebugCardJsonFileStore(Gson gson, DebugCardJsonPaths paths)
 	{
 		this.paths = paths;
+		this.prettyGson = gson.newBuilder().setPrettyPrinting().create();
 	}
 
 	Optional<Path> workspaceCardJson()

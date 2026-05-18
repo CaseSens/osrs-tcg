@@ -1,5 +1,6 @@
 package com.osrstcg.debug.catalogedit;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -21,7 +22,7 @@ public class DebugCardJsonFileStoreTest
 			String seed = "[{\"name\":\"Test sword\",\"value\":1,\"combatStats\":{\"attackStab\":5},\"category\":[\"Weapon\"]}]";
 			Files.writeString(file, seed, StandardCharsets.UTF_8);
 
-			DebugCardJsonFileStore store = new DebugCardJsonFileStore(new DebugCardJsonPaths());
+			DebugCardJsonFileStore store = new DebugCardJsonFileStore(new Gson(), new DebugCardJsonPaths());
 			store.updateCard(file, "Test sword", new DebugCardJsonFileStore.CardJsonEdit(
 				List.of("Weapon", "Resource"),
 				"https://example.com/img.png",
@@ -55,7 +56,7 @@ public class DebugCardJsonFileStoreTest
 				"[{\"name\":\"Keep\"},{\"name\":\"Remove me\"}]",
 				StandardCharsets.UTF_8);
 
-			DebugCardJsonFileStore store = new DebugCardJsonFileStore(new DebugCardJsonPaths());
+			DebugCardJsonFileStore store = new DebugCardJsonFileStore(new Gson(), new DebugCardJsonPaths());
 			store.deleteCard(file, "Remove me");
 
 			JsonArray array = new JsonParser().parse(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonArray();
