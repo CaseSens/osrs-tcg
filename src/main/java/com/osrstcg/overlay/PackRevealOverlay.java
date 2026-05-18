@@ -168,7 +168,7 @@ public class PackRevealOverlay extends Overlay
 			apexPackPointerWasInside = false;
 		}
 		updateHoverDynamics(canvas, layout, cardCount, phase, snap.getPhaseElapsedMs());
-		tickMythicHum(phase, snap);
+		tryPlayMythicHum(phase, snap);
 		tickDealCardMotionSounds(phase, cardCount, snap.getPhaseElapsedMs());
 		if (phase == PackRevealService.Phase.PACK_READY)
 		{
@@ -391,11 +391,11 @@ public class PackRevealOverlay extends Overlay
 		return true;
 	}
 
-	/** Premium hum loops while any face-down card that qualifies for hum/reveal remains, after the sealed pack is opened (not on {@link PackRevealService.Phase#PACK_READY}). */
-	private void tickMythicHum(PackRevealService.Phase phase, PackRevealService.RevealPaintSnapshot snap)
+	/** One-shot premium hum per reveal when a qualifying card is still face-down after the pack opens. */
+	private void tryPlayMythicHum(PackRevealService.Phase phase, PackRevealService.RevealPaintSnapshot snap)
 	{
 		boolean humWanted = phase != PackRevealService.Phase.PACK_READY && snap.hasUnrevealedMythic();
-		packRevealSoundService.tickMythicHum(true, humWanted);
+		packRevealSoundService.tryPlayMythicHum(humWanted);
 	}
 
 	private void tickDealCardMotionSounds(PackRevealService.Phase phase, int cardCount, long phaseElapsedMs)
