@@ -3,8 +3,6 @@ package com.osrstcg.service;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URL;
-import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -24,6 +22,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.RuneLite;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 @Slf4j
 @Singleton
@@ -31,11 +32,13 @@ public class WikiImageCacheService
 {
 	private static final String WIKI_BASE_URL = "https://oldschool.runescape.wiki";
 
+	private final OkHttpClient okHttpClient;
 	private final Map<String, CompletableFuture<BufferedImage>> imageFutures = new ConcurrentHashMap<>();
 
 	@Inject
-	public WikiImageCacheService()
+	public WikiImageCacheService(OkHttpClient okHttpClient)
 	{
+		this.okHttpClient = okHttpClient;
 	}
 
 	public void preload(Collection<String> urls)
@@ -112,17 +115,24 @@ public class WikiImageCacheService
 		{
 			try
 			{
-				URLConnection connection = new URL(candidate).openConnection();
-				connection.setConnectTimeout(3000);
-				connection.setReadTimeout(4000);
-				connection.setRequestProperty("User-Agent", "Mozilla/5.0 (osrstcg)");
-				try (InputStream inputStream = connection.getInputStream())
+				Request request = new Request.Builder()
+					.url(candidate)
+					.header("User-Agent", "Mozilla/5.0 (osrstcg)")
+					.build();
+				try (Response response = okHttpClient.newCall(request).execute())
 				{
-					BufferedImage image = ImageIO.read(inputStream);
-					if (image != null)
+					if (!response.isSuccessful() || response.body() == null)
 					{
-						persistToDisk(url, image);
-						return image;
+						continue;
+					}
+					try (InputStream inputStream = response.body().byteStream())
+					{
+						BufferedImage image = ImageIO.read(inputStream);
+						if (image != null)
+						{
+							persistToDisk(url, image);
+							return image;
+						}
 					}
 				}
 			}
