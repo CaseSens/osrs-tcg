@@ -39,6 +39,23 @@ public class TcgStateStoreTest
 	}
 
 	@Test
+	public void secondSaveRotatesBackupToPreviousPrimary()
+	{
+		TcgState first = stateWithCard("First card");
+		store.save(first);
+
+		TcgState second = stateWithCard("Second card");
+		store.save(second);
+
+		String backupJson = TcgStateStorageEncoding.decode(config.get("stateBackup"));
+		TcgState backup = codec.fromJson(backupJson);
+		Assert.assertEquals("First card", backup.getCollectionState().getOwnedInstances().get(0).getCardName());
+
+		TcgState primary = store.load();
+		Assert.assertEquals("Second card", primary.getCollectionState().getOwnedInstances().get(0).getCardName());
+	}
+
+	@Test
 	public void loadRestoresFromBackupWhenPrimaryHashMismatches()
 	{
 		TcgState state = stateWithCard("Dragon dagger");

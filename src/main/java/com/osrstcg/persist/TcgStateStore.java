@@ -70,8 +70,14 @@ public class TcgStateStore
 		}
 
 		String hashHex = TcgStateHash.hexOfUtf8(stored);
+		rotateBackupFromValidPrimary();
 		writeProfileScoped(STATE_KEY, stored);
 		writeProfileScoped(STATE_HASH_KEY, hashHex);
+		if (isBackupMissing())
+		{
+			writeProfileScoped(STATE_BACKUP_KEY, stored);
+			writeProfileScoped(STATE_BACKUP_HASH_KEY, hashHex);
+		}
 
 		String roundTrip = getProfileScoped(STATE_KEY);
 		String roundTripHash = getProfileScoped(STATE_HASH_KEY);
@@ -83,11 +89,34 @@ public class TcgStateStore
 		{
 			log.error("OSRS TCG state save verification failed: hash mismatch after write.");
 		}
-		else
+	}
+
+	private void rotateBackupFromValidPrimary()
+	{
+		String currentState = getProfileScoped(STATE_KEY);
+		if (currentState == null || currentState.isEmpty())
 		{
-			writeProfileScoped(STATE_BACKUP_KEY, roundTrip);
-			writeProfileScoped(STATE_BACKUP_HASH_KEY, roundTripHash.trim());
+			return;
 		}
+
+		String currentHash = getProfileScoped(STATE_HASH_KEY);
+		if (currentHash != null && !currentHash.isEmpty())
+		{
+			String actualHex = TcgStateHash.hexOfUtf8(currentState);
+			if (!actualHex.equalsIgnoreCase(currentHash.trim()))
+			{
+				return;
+			}
+			writeProfileScoped(STATE_BACKUP_HASH_KEY, currentHash.trim());
+		}
+
+		writeProfileScoped(STATE_BACKUP_KEY, currentState);
+	}
+
+	private boolean isBackupMissing()
+	{
+		String backupState = getProfileScoped(STATE_BACKUP_KEY);
+		return backupState == null || backupState.isEmpty();
 	}
 
 	private LoadAttempt tryLoad(String stateKey, String hashKey)
