@@ -42,19 +42,15 @@ public final class NpcKillCreditTracker
 
 	/** Kill-credit exclusions: exact name, name fragment (with optional exception), or NPC id. */
 	private static final NpcExclusionRule[] NPC_EXCLUSIONS = {
-		NpcExclusionRule.exactName("Great Olm"),
 		NpcExclusionRule.exactName("Alchemical Hydra"),
+		NpcExclusionRule.exactName("The Hueycoatl"),
 		NpcExclusionRule.nameContains("nylocas", "Nylocas Vasilias"),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL_BODY_SEGMENTS),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL_TAIL),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL_BODY_AND_RUBBLE),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.GROTESQUE_GUARDIANS_DAWN),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.GROTESQUE_GUARDIANS_DUSK),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.GROTESQUE_GUARDIANS),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.ALCHEMICAL_HYDRA_PHASES),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.PHANTOM_MUSPAH_UNSTABLE_ICE),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.AMOXLIATL_UNSTABLE_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.CRACKED_ICE),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.GREAT_OLM_RIGHT_CLAW),
-		NpcExclusionRule.npcIds(ExcludedNpcIds.GREAT_OLM_LEFT_CLAW),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.GREAT_OLM),
 	};
 
 	private final Client client;
@@ -251,36 +247,25 @@ public final class NpcKillCreditTracker
 	 */
 	private static final class ExcludedNpcIds
 	{
-		/** The Hueycoatl — exposed body segments before the summit fight. */
-		static final Set<Integer> HUEYCOATL_BODY_SEGMENTS = Set.of(14010, 14011, 14013);
+		/** The Hueycoatl — all forms (kill credits via {@link GameMessageCreditTracker}). */
+		static final Set<Integer> HUEYCOATL = Set.of(
+			14009, 14010, 14011, 14012, 14013, 14014, 14015, 14017);
 
-		/** The Hueycoatl — tail (including broken tail during shield phase). */
-		static final Set<Integer> HUEYCOATL_TAIL = Set.of(14014, 14015);
+		/** Grotesque Guardians — Dawn and Dusk (kill credits via {@link GameMessageCreditTracker}). */
+		static final Set<Integer> GROTESQUE_GUARDIANS = Set.of(
+			7851, 7852, 7853, 7854, 7855, 7882, 7883, 7884, 7885, 7886, 7887, 7888, 7889);
 
-		/** The Hueycoatl — coiled body parts and rubble on the mountain path. */
-		static final Set<Integer> HUEYCOATL_BODY_AND_RUBBLE = Set.of(14017, 14018);
-
-		/** Grotesque Guardians — Dawn (kill credits via {@link GameMessageCreditTracker}). */
-		static final Set<Integer> GROTESQUE_GUARDIANS_DAWN = Set.of(7852, 7853, 7884, 7885);
-
-		/** Grotesque Guardians — Dusk first and second forms. */
-		static final Set<Integer> GROTESQUE_GUARDIANS_DUSK = Set.of(
-			7851, 7854, 7855, 7882, 7883, 7886, 7887, 7888, 7889);
-
-		/** Alchemical Hydra — first through final transition phases (8622 awards credit on death). */
+		/** Alchemical Hydra — (kill credits via {@link GameMessageCreditTracker}).*/
 		static final Set<Integer> ALCHEMICAL_HYDRA_PHASES = Set.of(8615, 8619, 8620, 8621);
 
-		/** Phantom Muspah — unstable ice spawned during the fight. */
-		static final Set<Integer> PHANTOM_MUSPAH_UNSTABLE_ICE = Set.of(13688);
+		/** Amoxliatl — unstable ice blocks during the fight. */
+		static final Set<Integer> AMOXLIATL_UNSTABLE_ICE = Set.of(13688);
 
-		/** Cracked Ice — Moons. */
+		/** Cracked Ice — Blue Moon. */
 		static final Set<Integer> CRACKED_ICE = Set.of(13026);
 
-		/** Great Olm — right claw ({@link #NPC_EXCLUSIONS} exact-name rule covers the head). */
-		static final Set<Integer> GREAT_OLM_RIGHT_CLAW = Set.of(7550, 7553);
-
-		/** Great Olm — left claw. */
-		static final Set<Integer> GREAT_OLM_LEFT_CLAW = Set.of(7552, 7555);
+		/** Great Olm — head and claws, normal and challenge mode (kill credits via {@link GameMessageCreditTracker}). */
+		static final Set<Integer> GREAT_OLM = Set.of(7550, 7551, 7552, 7553, 7554, 7555);
 
 		private ExcludedNpcIds()
 		{
@@ -292,12 +277,6 @@ public final class NpcKillCreditTracker
 	 */
 	private static final class HealthTrackedNpcIds
 	{
-		/** The Hueycoatl — summit fight (earlier form; only {@link #HUEYCOATL_FINAL} awards credit). */
-		static final int HUEYCOATL = 14009;
-
-		/** The Hueycoatl — final kill form on the Darkfrost summit. */
-		static final int HUEYCOATL_FINAL = 14012;
-
 		/** Amoxliatl — Varlamore frost boss. */
 		static final int AMOXLIATL = 13685;
 
@@ -314,8 +293,6 @@ public final class NpcKillCreditTracker
 		static final int BLUE_MOON = 13013;
 
 		static final Set<Integer> ALL = Set.of(
-			HUEYCOATL,
-			HUEYCOATL_FINAL,
 			AMOXLIATL,
 			DUKE_SUCELLUS,
 			BLOOD_MOON,
@@ -448,7 +425,7 @@ public final class NpcKillCreditTracker
 					int healthRatio = npc.getHealthRatio();
 					int npcIndex = npc.getIndex();
 
-					if (healthRatio <= 1 && !loggedNpcIndices.contains(npcIndex) && shouldCredit(npc))
+					if (healthRatio <= 1 && !loggedNpcIndices.contains(npcIndex))
 					{
 						loggedNpcIndices.add(npcIndex);
 						String name = normalizeName(npc.getName());
@@ -467,24 +444,6 @@ public final class NpcKillCreditTracker
 					}
 				}
 			});
-		}
-
-		private static boolean shouldCredit(NPC npc)
-		{
-			if ("The Hueycoatl".equalsIgnoreCase(npc.getName()))
-			{
-				return npc.getId() == HealthTrackedNpcIds.HUEYCOATL_FINAL;
-			}
-			return true;
-		}
-
-		private static String normalizeName(String npcName)
-		{
-			if (npcName == null)
-			{
-				return "Unnamed NPC";
-			}
-			return npcName.replaceAll("<.*?>", "").trim();
 		}
 
 		void retrackAfterPlayerHit(NPC npc)

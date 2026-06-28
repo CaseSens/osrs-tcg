@@ -26,6 +26,9 @@ public final class GameMessageCreditTracker
 	private static final long GROTESQUE_GUARDIANS_KILL_CREDITS = 476L;
 	private static final String GROTESQUE_GUARDIANS_KILL_PREFIX = "Your Grotesque Guardians kill count is:";
 
+	private static final long HUEYCOATL_KILL_CREDITS = 642L;
+	private static final String HUEYCOATL_KILL_PREFIX = "Your Hueycoatl kill count is:";
+
 	private static final List<CreditRule> CREDIT_RULES = buildCreditRules();
 
 	private static List<CreditRule> buildCreditRules()
@@ -39,6 +42,10 @@ public final class GameMessageCreditTracker
 			ALCHEMICAL_HYDRA_KILL_PREFIX,
 			ALCHEMICAL_HYDRA_KILL_CREDITS,
 			"Alchemical Hydra kill"));
+		rules.add(CreditRule.prefix(
+			HUEYCOATL_KILL_PREFIX,
+			HUEYCOATL_KILL_CREDITS,
+			"The Hueycoatl kill"));
 		rules.add(CreditRule.prefix(
 			GROTESQUE_GUARDIANS_KILL_PREFIX,
 			GROTESQUE_GUARDIANS_KILL_CREDITS,
