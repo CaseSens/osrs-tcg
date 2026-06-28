@@ -47,6 +47,7 @@ public final class NpcKillCreditTracker
 		NpcExclusionRule.nameContains("nylocas", "Nylocas Vasilias"),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.GROTESQUE_GUARDIANS),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.ROYAL_TITANS),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.ALCHEMICAL_HYDRA_PHASES),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.AMOXLIATL_UNSTABLE_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.CRACKED_ICE),
@@ -254,6 +255,10 @@ public final class NpcKillCreditTracker
 		/** Grotesque Guardians — Dawn and Dusk (kill credits via {@link GameMessageCreditTracker}). */
 		static final Set<Integer> GROTESQUE_GUARDIANS = Set.of(
 			7851, 7852, 7853, 7854, 7855, 7882, 7883, 7884, 7885, 7886, 7887, 7888, 7889);
+
+		/** Royal Titans — all forms (kill credits via {@link GameMessageCreditTracker}). */
+		static final Set<Integer> ROYAL_TITANS = Set.of(
+			12596, 14147, 14148, 14149, 14150, 14151, 14152, 14153);
 
 		/** Alchemical Hydra — (kill credits via {@link GameMessageCreditTracker}).*/
 		static final Set<Integer> ALCHEMICAL_HYDRA_PHASES = Set.of(8615, 8619, 8620, 8621);

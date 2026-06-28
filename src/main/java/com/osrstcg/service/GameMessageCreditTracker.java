@@ -29,6 +29,9 @@ public final class GameMessageCreditTracker
 	private static final long HUEYCOATL_KILL_CREDITS = 642L;
 	private static final String HUEYCOATL_KILL_PREFIX = "Your Hueycoatl kill count is:";
 
+	private static final long ROYAL_TITANS_KILL_CREDITS = 525L;
+	private static final String ROYAL_TITANS_KILL_PREFIX = "Your Royal Titans kill count is:";
+
 	private static final List<CreditRule> CREDIT_RULES = buildCreditRules();
 
 	private static List<CreditRule> buildCreditRules()
@@ -50,6 +53,10 @@ public final class GameMessageCreditTracker
 			GROTESQUE_GUARDIANS_KILL_PREFIX,
 			GROTESQUE_GUARDIANS_KILL_CREDITS,
 			"Grotesque Guardians kill"));
+		rules.add(CreditRule.prefix(
+			ROYAL_TITANS_KILL_PREFIX,
+			ROYAL_TITANS_KILL_CREDITS,
+			"Royal Titans kill"));
 		return List.copyOf(rules);
 	}
 
