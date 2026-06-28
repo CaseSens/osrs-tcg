@@ -1,6 +1,7 @@
 package com.osrstcg.service;
 
 import com.osrstcg.ui.TcgPanel;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -16,12 +17,34 @@ import net.runelite.client.util.Text;
 @Singleton
 public final class GameMessageCreditTracker
 {
-	private static final List<CreditRule> CREDIT_RULES = List.of(
-		CreditRule.prefix(
-			"Your completed Chambers of Xeric count is:",
-			12_500L,
-			"Chambers of Xeric completion")
-	);
+	private static final long CHAMBERS_OF_XERIC_COMPLETION_CREDITS = 12_500L;
+	private static final String CHAMBERS_OF_XERIC_COMPLETION_PREFIX = "Your completed Chambers of Xeric count is:";
+
+	private static final long ALCHEMICAL_HYDRA_KILL_CREDITS = 426L;
+	private static final String ALCHEMICAL_HYDRA_KILL_PREFIX = "Your Alchemical Hydra kill count is:";
+
+	private static final long GROTESQUE_GUARDIANS_KILL_CREDITS = 476L;
+	private static final String GROTESQUE_GUARDIANS_KILL_PREFIX = "Your Grotesque Guardians kill count is:";
+
+	private static final List<CreditRule> CREDIT_RULES = buildCreditRules();
+
+	private static List<CreditRule> buildCreditRules()
+	{
+		List<CreditRule> rules = new ArrayList<>();
+		rules.add(CreditRule.prefix(
+			CHAMBERS_OF_XERIC_COMPLETION_PREFIX,
+			CHAMBERS_OF_XERIC_COMPLETION_CREDITS,
+			"Chambers of Xeric completion"));
+		rules.add(CreditRule.prefix(
+			ALCHEMICAL_HYDRA_KILL_PREFIX,
+			ALCHEMICAL_HYDRA_KILL_CREDITS,
+			"Alchemical Hydra kill"));
+		rules.add(CreditRule.prefix(
+			GROTESQUE_GUARDIANS_KILL_PREFIX,
+			GROTESQUE_GUARDIANS_KILL_CREDITS,
+			"Grotesque Guardians kill"));
+		return List.copyOf(rules);
+	}
 
 	private final CreditAwardService creditAwardService;
 	private final TcgPanel tcgPanel;

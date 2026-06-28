@@ -34,10 +34,7 @@ public final class NpcKillCreditTracker
 		Map.entry("Kalphite Queen", Set.of(965)),
 		Map.entry("The Nightmare", Set.of(378)),
 		Map.entry("Phosani's Nightmare", Set.of(377)),
-		Map.entry("Alchemical Hydra", Set.of(8622)),
-		Map.entry("Hydra", Set.of(8609)),
 		Map.entry("Phantom Muspah", Set.of(12082)),
-		Map.entry("Dusk", Set.of(7889)),
 		Map.entry("Abyssal Sire", Set.of(5891)),
 		Map.entry("Kephri", Set.of(11722)),
 		Map.entry("Verzik Vitur", Set.of(10832, 8371, 10849))
@@ -46,11 +43,14 @@ public final class NpcKillCreditTracker
 	/** Kill-credit exclusions: exact name, name fragment (with optional exception), or NPC id. */
 	private static final NpcExclusionRule[] NPC_EXCLUSIONS = {
 		NpcExclusionRule.exactName("Great Olm"),
+		NpcExclusionRule.exactName("Alchemical Hydra"),
 		NpcExclusionRule.nameContains("nylocas", "Nylocas Vasilias"),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL_BODY_SEGMENTS),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL_TAIL),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.HUEYCOATL_BODY_AND_RUBBLE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.GROTESQUE_GUARDIANS_DAWN),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.GROTESQUE_GUARDIANS_DUSK),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.ALCHEMICAL_HYDRA_PHASES),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.PHANTOM_MUSPAH_UNSTABLE_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.CRACKED_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.GREAT_OLM_RIGHT_CLAW),
@@ -260,10 +260,17 @@ public final class NpcKillCreditTracker
 		/** The Hueycoatl — coiled body parts and rubble on the mountain path. */
 		static final Set<Integer> HUEYCOATL_BODY_AND_RUBBLE = Set.of(14017, 14018);
 
-		/** Grotesque Guardians — Dawn phase ({@link #FINAL_PHASE_IDS} credits Dusk). */
-		static final Set<Integer> GROTESQUE_GUARDIANS_DAWN = Set.of(7888);
+		/** Grotesque Guardians — Dawn (kill credits via {@link GameMessageCreditTracker}). */
+		static final Set<Integer> GROTESQUE_GUARDIANS_DAWN = Set.of(7852, 7853, 7884, 7885);
 
-		/** Amoxliatl — unstable ice spawned during the fight. */
+		/** Grotesque Guardians — Dusk first and second forms. */
+		static final Set<Integer> GROTESQUE_GUARDIANS_DUSK = Set.of(
+			7851, 7854, 7855, 7882, 7883, 7886, 7887, 7888, 7889);
+
+		/** Alchemical Hydra — first through final transition phases (8622 awards credit on death). */
+		static final Set<Integer> ALCHEMICAL_HYDRA_PHASES = Set.of(8615, 8619, 8620, 8621);
+
+		/** Phantom Muspah — unstable ice spawned during the fight. */
 		static final Set<Integer> PHANTOM_MUSPAH_UNSTABLE_ICE = Set.of(13688);
 
 		/** Cracked Ice — Moons. */
