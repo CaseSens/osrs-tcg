@@ -12,4 +12,5 @@ public class TcgPublicStats
 	int totalCardPool;
 	long openedPacks;
 	int totalCardsOwned;
+	boolean customRates;
 }

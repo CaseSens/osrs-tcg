@@ -34,16 +34,18 @@ public class TcgPublicStatsCalculator
 	{
 		Map<CardCollectionKey, Integer> owned;
 		long openedPacks;
+		boolean customRates;
 		synchronized (stateService)
 		{
 			TcgState s = stateService.getState();
 			owned = new HashMap<>(s.getCollectionState().getOwnedCards());
 			openedPacks = s.getEconomyState().getOpenedPacks();
+			customRates = !s.getRewardTuning().isDefault();
 		}
-		return compute(owned, openedPacks);
+		return compute(owned, openedPacks, customRates);
 	}
 
-	private TcgPublicStats compute(Map<CardCollectionKey, Integer> owned, long openedPacks)
+	private TcgPublicStats compute(Map<CardCollectionKey, Integer> owned, long openedPacks, boolean customRates)
 	{
 		List<CardDefinition> all = cardDatabase.getCards();
 		List<CardDefinition> rollPool = RollPoolFilter.filterRollPool(all);
@@ -92,7 +94,7 @@ public class TcgPublicStatsCalculator
 			collectionScore += hasFoil ? RarityMath.foilAdjustedScoreRounded(def) : Math.round(RarityMath.score(def));
 		}
 
-		return new TcgPublicStats(collectionScore, completionPct, uniqueOwned, totalCardPool, openedPacks, totalCardsOwned);
+		return new TcgPublicStats(collectionScore, completionPct, uniqueOwned, totalCardPool, openedPacks, totalCardsOwned, customRates);
 	}
 
 	private static Set<String> collectedNamesFromOwned(Map<CardCollectionKey, Integer> owned)

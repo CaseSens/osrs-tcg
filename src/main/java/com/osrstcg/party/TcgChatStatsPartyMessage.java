@@ -17,4 +17,5 @@ public class TcgChatStatsPartyMessage extends PartyMemberMessage
 	private int totalCardPool;
 	private long openedPacks;
 	private int totalCardsOwned;
+	private boolean customRates;
 }

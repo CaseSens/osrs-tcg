@@ -93,14 +93,15 @@ public class TcgChatStatsShareService
 			message.getUniqueOwned(),
 			message.getTotalCardPool(),
 			message.getOpenedPacks(),
-			message.getTotalCardsOwned());
+			message.getTotalCardsOwned(),
+			message.isCustomRates());
 		putSanitizedPlayerName(Text.sanitize(dn), stats);
 	}
 
 	public String buildColoredLine(TcgPublicStats s)
 	{
 		String pct = String.format(Locale.US, "%.1f%%", s.getCompletionPct());
-		return new ChatMessageBuilder()
+		ChatMessageBuilder builder = new ChatMessageBuilder()
 			.append(ChatColorType.NORMAL)
 			.append("Collection score: ")
 			.append(ChatColorType.HIGHLIGHT)
@@ -124,8 +125,13 @@ public class TcgChatStatsShareService
 			.append(ChatColorType.NORMAL)
 			.append(", Total cards: ")
 			.append(ChatColorType.HIGHLIGHT)
-			.append(NumberFormatting.format(s.getTotalCardsOwned()))
-			.build();
+			.append(NumberFormatting.format(s.getTotalCardsOwned()));
+		if (s.isCustomRates())
+		{
+			builder.append(ChatColorType.NORMAL)
+				.append(" (custom rates)");
+		}
+		return builder.build();
 	}
 
 	private static String normalizeKey(String sanitizedRsn)

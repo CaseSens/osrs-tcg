@@ -66,6 +66,11 @@ public final class RewardTuningState
 		return Math.max(0.0d, Math.min(100.0d, value));
 	}
 
+	public boolean isDefault()
+	{
+		return matchesPartnerTuning(DEFAULTS);
+	}
+
 	/**
 	 * True if another profile's locked tuning matches this one (party card transfers require identical settings).
 	 */

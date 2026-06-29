@@ -122,6 +122,7 @@ public class TcgPartyAnnouncer
 			message.setTotalCardPool(stats.getTotalCardPool());
 			message.setOpenedPacks(stats.getOpenedPacks());
 			message.setTotalCardsOwned(stats.getTotalCardsOwned());
+			message.setCustomRates(stats.isCustomRates());
 			partyService.send(message);
 		}
 		catch (Exception ex)
