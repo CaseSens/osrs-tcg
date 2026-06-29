@@ -176,6 +176,7 @@ public class OsrsTcgPlugin extends Plugin
 		mouseManager.registerMouseListener(packRevealInputListener);
 		mouseManager.registerMouseWheelListener(packRevealInputListener);
 		keyManager.registerKeyListener(packRevealInputListener);
+		eventBus.register(creditAwardService);
 		eventBus.register(npcKillCreditTracker);
 		eventBus.register(gameMessageCreditTracker);
 		eventBus.register(cardPartyTransferService);
@@ -201,6 +202,7 @@ public class OsrsTcgPlugin extends Plugin
 			clientToolbar.removeNavigation(navigationButton);
 			navigationButton = null;
 		}
+		eventBus.unregister(creditAwardService);
 		eventBus.unregister(npcKillCreditTracker);
 		eventBus.unregister(gameMessageCreditTracker);
 		eventBus.unregister(cardPartyTransferService);

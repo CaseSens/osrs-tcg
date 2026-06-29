@@ -13,7 +13,9 @@ import net.runelite.api.GameState;
 import net.runelite.api.Skill;
 import net.runelite.api.events.FakeXpDrop;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
+import net.runelite.client.eventbus.Subscribe;
 
 @Singleton
 @Slf4j
@@ -23,6 +25,8 @@ public class CreditAwardService
 	private static final long CREDITS_PER_CHUNK = 100L;
 	/** Ignore bogus fake XP drop payloads. */
 	private static final int FAKE_XP_DROP_SANITY_CAP = 20_000_000;
+	/** Suppress credit awards while stats settle after login or a world hop. */
+	private static final int CREDIT_AWARD_COOLDOWN_TICKS = 15;
 
 	private final Client client;
 	private final TcgStateService stateService;
@@ -30,6 +34,8 @@ public class CreditAwardService
 	private final int[] previousSkillXp = new int[Skill.values().length];
 	private boolean skillLevelsInitialized;
 	private boolean skillXpInitialized;
+	private boolean creditAwardCooldownActive;
+	private int creditAwardCooldownUntilTick;
 
 	/** XP from skill drops not yet converted into credit chunks. */
 	private long uncreditedXp;
@@ -49,12 +55,12 @@ public class CreditAwardService
 		uncreditedXp = 0L;
 		skillXpInitialized = false;
 		Arrays.fill(previousSkillXp, 0);
-		snapshotSkillExperiencesIfLoggedIn();
+		snapshotSkillBaselinesIfLoggedIn();
 	}
 
 	public void awardNpcKillCredits(String npcName, int combatLevel)
 	{
-		if (combatLevel <= 0)
+		if (combatLevel <= 0 || isCreditAwardOnCooldown())
 		{
 			return;
 		}
@@ -66,25 +72,30 @@ public class CreditAwardService
 			return;
 		}
 
-		stateService.addCredits(totalCredits);
+		addCredits(totalCredits);
 		debugAward(String.format("Killed %s (lvl %d) -> +%s credits (total %s)",
 			safeName(npcName), combatLevel, NumberFormatting.format(totalCredits), NumberFormatting.format(stateService.getCredits())));
 	}
 
 	public void awardFlatCredits(String reason, long credits)
 	{
-		if (credits <= 0L)
+		if (credits <= 0L || isCreditAwardOnCooldown())
 		{
 			return;
 		}
 
-		stateService.addCredits(credits);
+		addCredits(credits);
 		debugAward(String.format("%s -> +%s credits (total %s)",
 			safeName(reason), NumberFormatting.format(credits), NumberFormatting.format(stateService.getCredits())));
 	}
 
 	public void onStatChanged(StatChanged event)
 	{
+		if (isCreditAwardOnCooldown())
+		{
+			return;
+		}
+
 		Skill skill = event.getSkill();
 		if (skill == null)
 		{
@@ -123,7 +134,7 @@ public class CreditAwardService
 		lastKnownRealLevels.put(skill, current);
 		if (totalReward > 0)
 		{
-			stateService.addCredits(totalReward);
+			addCredits(totalReward);
 			debugAward(String.format("Level up %s: %d -> %d -> +%s credits (total %s)",
 				skill.getName(), previous, current, NumberFormatting.format(totalReward), NumberFormatting.format(stateService.getCredits())));
 		}
@@ -131,7 +142,7 @@ public class CreditAwardService
 
 	public void onFakeXpDrop(FakeXpDrop event)
 	{
-		if (event == null || event.getSkill() == null)
+		if (event == null || event.getSkill() == null || isCreditAwardOnCooldown())
 		{
 			return;
 		}
@@ -149,20 +160,28 @@ public class CreditAwardService
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			lastKnownRealLevels.clear();
-			skillLevelsInitialized = true;
-			snapshotSkillExperiencesIfLoggedIn();
+			beginCreditAwardCooldown();
+			resetSkillCreditTracking();
 			return;
 		}
 
 		if (event.getGameState() == GameState.LOGIN_SCREEN || event.getGameState() == GameState.HOPPING)
 		{
-			lastKnownRealLevels.clear();
-			skillLevelsInitialized = false;
-			skillXpInitialized = false;
-			uncreditedXp = 0L;
-			Arrays.fill(previousSkillXp, 0);
+			beginCreditAwardCooldown();
+			resetSkillCreditTracking();
 		}
+	}
+
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		if (!creditAwardCooldownActive || isCreditAwardOnCooldown())
+		{
+			return;
+		}
+
+		creditAwardCooldownActive = false;
+		snapshotSkillBaselinesIfLoggedIn();
 	}
 
 	private void trackXpGainFromStatChanged(Skill skill, int currentXp)
@@ -215,12 +234,54 @@ public class CreditAwardService
 			return false;
 		}
 
-		stateService.addCredits(credits);
+		addCredits(credits);
 		uncreditedXp -= xpCredited;
 		debugAward(String.format("XP drop +%s (%s, chunks of %s) -> +%s credits (total %s)",
 			NumberFormatting.format(xpCredited), safeName(source), NumberFormatting.format(XP_PER_CREDIT_CHUNK),
 			NumberFormatting.format(credits), NumberFormatting.format(stateService.getCredits())));
 		return true;
+	}
+
+	private void addCredits(long credits)
+	{
+		if (credits <= 0L)
+		{
+			return;
+		}
+
+		stateService.addCredits(credits);
+	}
+
+	private void beginCreditAwardCooldown()
+	{
+		creditAwardCooldownActive = true;
+		if (client == null)
+		{
+			creditAwardCooldownUntilTick = 0;
+			return;
+		}
+
+		creditAwardCooldownUntilTick = client.getTickCount() + CREDIT_AWARD_COOLDOWN_TICKS;
+	}
+
+	private boolean isCreditAwardOnCooldown()
+	{
+		return creditAwardCooldownActive && client != null && client.getTickCount() < creditAwardCooldownUntilTick;
+	}
+
+	private void resetSkillCreditTracking()
+	{
+		lastKnownRealLevels.clear();
+		skillLevelsInitialized = false;
+		skillXpInitialized = false;
+		uncreditedXp = 0L;
+		Arrays.fill(previousSkillXp, 0);
+	}
+
+	private void snapshotSkillBaselinesIfLoggedIn()
+	{
+		snapshotSkillExperiencesIfLoggedIn();
+		snapshotSkillLevelsIfLoggedIn();
 	}
 
 	private void snapshotSkillExperiencesIfLoggedIn()
@@ -233,6 +294,26 @@ public class CreditAwardService
 		int[] experiences = client.getSkillExperiences();
 		System.arraycopy(experiences, 0, previousSkillXp, 0, Math.min(experiences.length, previousSkillXp.length));
 		skillXpInitialized = true;
+	}
+
+	private void snapshotSkillLevelsIfLoggedIn()
+	{
+		if (client == null || client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+
+		lastKnownRealLevels.clear();
+		for (Skill skill : Skill.values())
+		{
+			if (isOverallSkill(skill))
+			{
+				continue;
+			}
+
+			lastKnownRealLevels.put(skill, clampLevel(client.getRealSkillLevel(skill)));
+		}
+		skillLevelsInitialized = true;
 	}
 
 	private int applyKillCreditTuning(int baseLevel)
