@@ -486,7 +486,7 @@ public final class CollectionAlbumWindow extends JFrame
 			updateAlbumRepaintTimers();
 		});
 
-		foilAnimTimer = new Timer(33, e ->
+		foilAnimTimer = new Timer(SharedCardRenderer.FOIL_SPARKLE_FRAME_MS, e ->
 		{
 			if (!isShowing())
 			{
@@ -495,9 +495,9 @@ public final class CollectionAlbumWindow extends JFrame
 			long now = System.currentTimeMillis();
 			boolean sheen = SharedCardRenderer.isFoilSheenAnimating();
 			boolean repaintGrid = grid.hasVisibleFoilCards()
-				&& (sheen || now - lastFoilSparkleRepaintMs >= 150L);
+				&& (sheen || now - lastFoilSparkleRepaintMs >= SharedCardRenderer.FOIL_SPARKLE_FRAME_MS);
 			boolean repaintVariants = albumVariantsVisible && variantsPanel.hasVisibleFoilCards()
-				&& (sheen || now - lastFoilSparkleRepaintMs >= 150L);
+				&& (sheen || now - lastFoilSparkleRepaintMs >= SharedCardRenderer.FOIL_SPARKLE_FRAME_MS);
 			if (!repaintGrid && !repaintVariants)
 			{
 				return;

@@ -37,6 +37,10 @@ public final class SharedCardRenderer
 	private static final float FOIL_TWINKLE_CONCAVE_K = 0.11f;
 	/** Active sheen sweep duration (ms); half of prior 1150 ms = double sweep speed. */
 	private static final int FOIL_SHEEN_SWEEP_MS = 575;
+	/** Foil sparkle animation target frame rate. */
+	public static final int FOIL_SPARKLE_FPS = 60;
+	/** Milliseconds between foil sparkle repaints ({@value #FOIL_SPARKLE_FPS} FPS). */
+	public static final int FOIL_SPARKLE_FRAME_MS = 1000 / FOIL_SPARKLE_FPS;
 	/** Idle time after each sweep before the next (ms). */
 	private static final int FOIL_SHEEN_COOLDOWN_MS = 5000;
 	private static final int FOIL_SHEEN_CYCLE_MS = FOIL_SHEEN_SWEEP_MS + FOIL_SHEEN_COOLDOWN_MS;
