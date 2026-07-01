@@ -9,6 +9,8 @@ public class TcgPublicStats
 	long collectionScore;
 	double completionPct;
 	int uniqueOwned;
+	int uniqueFoilOwned;
+	double foilCompletionPct;
 	int totalCardPool;
 	long openedPacks;
 	int totalCardsOwned;

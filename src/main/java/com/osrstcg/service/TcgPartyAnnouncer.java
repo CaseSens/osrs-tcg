@@ -119,6 +119,8 @@ public class TcgPartyAnnouncer
 			message.setCollectionScore(stats.getCollectionScore());
 			message.setCompletionPct(stats.getCompletionPct());
 			message.setUniqueOwned(stats.getUniqueOwned());
+			message.setUniqueFoilOwned(stats.getUniqueFoilOwned());
+			message.setFoilCompletionPct(stats.getFoilCompletionPct());
 			message.setTotalCardPool(stats.getTotalCardPool());
 			message.setOpenedPacks(stats.getOpenedPacks());
 			message.setTotalCardsOwned(stats.getTotalCardsOwned());

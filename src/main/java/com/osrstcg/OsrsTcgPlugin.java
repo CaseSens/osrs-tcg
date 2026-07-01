@@ -60,6 +60,7 @@ import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.FakeXpDrop;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.StatChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatCommandManager;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
@@ -93,6 +94,8 @@ public class OsrsTcgPlugin extends Plugin
 
 	@Inject
 	private Client client;
+	@Inject
+	private ClientThread clientThread;
 	@Inject
 	private ChatMessageManager chatMessageManager;
 	@Inject
@@ -358,12 +361,8 @@ public class OsrsTcgPlugin extends Plugin
 			tcgPanel.clearPackRevealSidebarFreeze();
 			tcgPanel.syncRewardDraftFromPersistent();
 			tcgPanel.resetSessionUi();
-			if (client != null)
-			{
-				client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
-					"[OSRS TCG] This profile was saved with debug mode on; collection and credits were reset.",
-					null);
-			}
+			queueGameMessage(
+				"[OSRS TCG] This profile was saved with debug mode on; collection and credits were reset.");
 		}
 		else
 		{
@@ -374,34 +373,41 @@ public class OsrsTcgPlugin extends Plugin
 
 	private void announceLoadResult(TcgStateLoadResult loadResult)
 	{
-		if (client == null || loadResult == null)
+		if (loadResult == null)
 		{
 			return;
 		}
 
 		if (loadResult.isPrimaryLoadFailed())
 		{
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
-				"[OSRS TCG] Could not load saved progress; trying backups.", null);
+			queueGameMessage("[OSRS TCG] Could not load saved progress; trying backups.");
 		}
 
 		if (loadResult.isAllBackupsFailed())
 		{
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
-				"[OSRS TCG] Could not restore progress from any backup.", null);
+			queueGameMessage("[OSRS TCG] Could not restore progress from any backup.");
 			return;
 		}
 
 		if (loadResult.getSource() == TcgStateLoadSource.CONFIG_BACKUP)
 		{
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
-				"[OSRS TCG] Restored progress from configuration backup.", null);
+			queueGameMessage("[OSRS TCG] Restored progress from configuration backup.");
 		}
 		else if (loadResult.getSource() == TcgStateLoadSource.FILE_BACKUP)
 		{
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
-				"[OSRS TCG] Restored progress from file backup.", null);
+			queueGameMessage("[OSRS TCG] Restored progress from file backup.");
 		}
+	}
+
+	private void queueGameMessage(String message)
+	{
+		if (client == null || clientThread == null || message == null || message.isEmpty())
+		{
+			return;
+		}
+
+		clientThread.invokeLater(() ->
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", message, null));
 	}
 
 	@Subscribe

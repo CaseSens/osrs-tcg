@@ -66,8 +66,19 @@ public class TcgPublicStatsCalculator
 			.filter(e -> e.getKey().getCardName() != null && rollPoolNames.contains(e.getKey().getCardName()))
 			.mapToInt(e -> e.getValue() == null ? 0 : e.getValue())
 			.sum();
+		int uniqueFoilOwned = (int) owned.keySet().stream()
+			.filter(k -> k.isFoil()
+				&& k.getCardName() != null
+				&& rollPoolNames.contains(k.getCardName()))
+			.filter(k ->
+			{
+				Integer qty = owned.get(k);
+				return qty != null && qty > 0;
+			})
+			.count();
 		int totalCardPool = rollPool.size();
 		double completionPct = totalCardPool <= 0 ? 0.0d : (100.0d * uniqueOwned) / totalCardPool;
+		double foilCompletionPct = totalCardPool <= 0 ? 0.0d : (100.0d * uniqueFoilOwned) / totalCardPool;
 
 		Set<String> collectedNames = collectedNamesFromOwned(owned);
 		Map<String, CardDefinition> defByLower = new HashMap<>();
@@ -94,7 +105,8 @@ public class TcgPublicStatsCalculator
 			collectionScore += hasFoil ? RarityMath.foilAdjustedScoreRounded(def) : Math.round(RarityMath.score(def));
 		}
 
-		return new TcgPublicStats(collectionScore, completionPct, uniqueOwned, totalCardPool, openedPacks, totalCardsOwned, customRates);
+		return new TcgPublicStats(collectionScore, completionPct, uniqueOwned, uniqueFoilOwned, foilCompletionPct,
+			totalCardPool, openedPacks, totalCardsOwned, customRates);
 	}
 
 	private static Set<String> collectedNamesFromOwned(Map<CardCollectionKey, Integer> owned)

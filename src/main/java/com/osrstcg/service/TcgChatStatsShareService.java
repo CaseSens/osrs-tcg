@@ -91,6 +91,8 @@ public class TcgChatStatsShareService
 			message.getCollectionScore(),
 			message.getCompletionPct(),
 			message.getUniqueOwned(),
+			message.getUniqueFoilOwned(),
+			message.getFoilCompletionPct(),
 			message.getTotalCardPool(),
 			message.getOpenedPacks(),
 			message.getTotalCardsOwned(),
@@ -101,6 +103,7 @@ public class TcgChatStatsShareService
 	public String buildColoredLine(TcgPublicStats s)
 	{
 		String pct = String.format(Locale.US, "%.1f%%", s.getCompletionPct());
+		String foilPct = String.format(Locale.US, "%.1f%%", s.getFoilCompletionPct());
 		ChatMessageBuilder builder = new ChatMessageBuilder()
 			.append(ChatColorType.NORMAL)
 			.append("Collection score: ")
@@ -119,7 +122,19 @@ public class TcgChatStatsShareService
 			.append(ChatColorType.HIGHLIGHT)
 			.append(NumberFormatting.format(s.getTotalCardPool()))
 			.append(ChatColorType.NORMAL)
-			.append(", Opened packs: ")
+			.append(", Unique foil cards: ")
+			.append(ChatColorType.HIGHLIGHT)
+			.append(NumberFormatting.format(s.getUniqueFoilOwned()))
+			.append(ChatColorType.NORMAL)
+			.append(" / ")
+			.append(ChatColorType.HIGHLIGHT)
+			.append(NumberFormatting.format(s.getTotalCardPool()))
+			.append(ChatColorType.NORMAL)
+			.append(" (")
+			.append(ChatColorType.HIGHLIGHT)
+			.append(foilPct)
+			.append(ChatColorType.NORMAL)
+			.append("), Opened packs: ")
 			.append(ChatColorType.HIGHLIGHT)
 			.append(NumberFormatting.format(s.getOpenedPacks()))
 			.append(ChatColorType.NORMAL)

@@ -14,6 +14,8 @@ public class TcgChatStatsPartyMessage extends PartyMemberMessage
 	private long collectionScore;
 	private double completionPct;
 	private int uniqueOwned;
+	private int uniqueFoilOwned;
+	private double foilCompletionPct;
 	private int totalCardPool;
 	private long openedPacks;
 	private int totalCardsOwned;
