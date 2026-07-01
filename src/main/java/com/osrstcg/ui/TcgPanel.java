@@ -98,6 +98,10 @@ public class TcgPanel extends PluginPanel
 	private static final String TCG_WELCOME_BETA_BODY =
 		"OSRS TCG is still in beta. More booster packs, features, and content are planned for future updates.";
 
+	private static final String TCG_WELCOME_COLLECTION_RESET_BODY =
+		"There will be a collection reset in the near future after fixing credit-related exploits, major bugs, "
+			+ "and adjusting rates based on user feedback.";
+
 	private static final String TCG_WELCOME_DISCLAIMER_HEADER = "Disclaimer";
 
 	private static final String TCG_WELCOME_DISCLAIMER_BODY =
@@ -1166,12 +1170,17 @@ public class TcgPanel extends PluginPanel
 
 	private static JTextArea buildWelcomeTextArea(int contentMaxW, String text, int topGap)
 	{
+		return buildWelcomeTextArea(contentMaxW, text, topGap, new Color(0xBBBBBB));
+	}
+
+	private static JTextArea buildWelcomeTextArea(int contentMaxW, String text, int topGap, Color foreground)
+	{
 		int w = Math.max(1, contentMaxW);
 		JTextArea ta = new JTextArea(text);
 		ta.setEditable(false);
 		ta.setOpaque(false);
 		ta.setFocusable(false);
-		ta.setForeground(new Color(0xBBBBBB));
+		ta.setForeground(foreground);
 		ta.setFont(FontManager.getRunescapeSmallFont());
 		ta.setLineWrap(true);
 		ta.setWrapStyleWord(true);
@@ -1204,6 +1213,7 @@ public class TcgPanel extends PluginPanel
 		wrap.add(buildWelcomeTextArea(w, TCG_WELCOME_TCG_COMMAND_BODY, 10));
 		wrap.add(buildWelcomeTextArea(w, TCG_WELCOME_CARD_VALUES_BODY, 10));
 		wrap.add(buildWelcomeTextArea(w, TCG_WELCOME_BETA_BODY, 10));
+		wrap.add(buildWelcomeTextArea(w, TCG_WELCOME_COLLECTION_RESET_BODY, 10, Color.YELLOW));
 
 		JLabel disclaimerHead = new JLabel(TCG_WELCOME_DISCLAIMER_HEADER);
 		disclaimerHead.setForeground(Color.WHITE);

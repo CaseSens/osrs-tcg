@@ -19,6 +19,8 @@ Card images are loaded from the [OSRS Wiki](https://oldschool.runescape.wiki/).
 
 ## Disclaimer
 
+**Upcoming collection reset:** There will be a collection reset in the near future after fixing credit-related exploits, major bugs, and adjusting rates based on feedback.
+
 This plugin is a fan-made minigame for fun only. Cards have no real-world or in-game monetary value and are not intended to be bought, sold, or traded for real money, bonds, gold, items, or any other goods or services.
 
 Do not pay for cards or collections, and do not accept payment from others for them. If someone offers to sell you cards or asks you to pay for theirs, decline and report them if appropriate.
