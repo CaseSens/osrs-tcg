@@ -101,7 +101,8 @@ public class TcgPanel extends PluginPanel
 
 	private static final String TCG_WELCOME_COLLECTION_RESET_BODY =
 		"There will be a collection reset in the near future after fixing credit-related exploits, major bugs, "
-			+ "and adjusting rates based on user feedback.";
+			+ "and adjusting rates based on user feedback. "
+			+ "What players get to keep from before the reset is yet to be decided.";
 
 	private static final String TCG_WELCOME_DISCLAIMER_HEADER = "Disclaimer";
 
