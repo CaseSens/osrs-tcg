@@ -8,6 +8,9 @@ import java.time.format.FormatStyle;
 
 public final class AlbumInstanceTooltip
 {
+	public static final String LOCKED_ACTION_HINT =
+		"This card is locked. Right-click it to unlock before selling or sending.";
+
 	private AlbumInstanceTooltip()
 	{
 	}
@@ -34,6 +37,14 @@ public final class AlbumInstanceTooltip
 			String when = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
 				.format(Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()));
 			sb.append(when);
+		}
+		if (o.isLocked())
+		{
+			if (sb.length() > 0)
+			{
+				sb.append('\n');
+			}
+			sb.append("Locked");
 		}
 		return sb.length() == 0 ? null : sb.toString();
 	}

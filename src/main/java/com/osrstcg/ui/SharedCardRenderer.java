@@ -48,6 +48,7 @@ public final class SharedCardRenderer
 	private static final Color PANEL_DARK = new Color(0x222222);
 	private static final Color PANEL_MID = new Color(0x2F2F2F);
 	private static final BufferedImage CARD_BACK_IMAGE = ImageUtil.loadImageResource(SharedCardRenderer.class, "/Cardback.png");
+	private static final BufferedImage LOCK_BADGE_IMAGE = ImageUtil.loadImageResource(SharedCardRenderer.class, "/lock.png");
 	private static final Map<Long, Path2D.Float> FOIL_TWINKLE_PATH_CACHE = new ConcurrentHashMap<>();
 
 	private SharedCardRenderer()
@@ -736,5 +737,48 @@ public final class SharedCardRenderer
 			out.append(ch);
 		}
 		return out + ellipsis;
+	}
+
+	/** Image band inside a drawn card face (below title, above tier line). */
+	private static Rectangle cardImageAreaBounds(Rectangle cardBounds)
+	{
+		if (cardBounds == null || cardBounds.width <= 0 || cardBounds.height <= 0)
+		{
+			return null;
+		}
+		int ft = frameThicknessFor(cardBounds);
+		Rectangle inner = inset(cardBounds, ft + 1);
+		int titleH = pct(inner.height, 0.10d);
+		int imageH = pct(inner.height, 0.40d);
+		return new Rectangle(inner.x, inner.y + titleH, inner.width, imageH);
+	}
+
+	/** Lock badge for locked collection copies (top-right of the card image area). */
+	public static void drawLockBadge(Graphics2D g2, Rectangle cardBounds)
+	{
+		if (g2 == null || cardBounds == null || LOCK_BADGE_IMAGE == null)
+		{
+			return;
+		}
+		Rectangle imageR = cardImageAreaBounds(cardBounds);
+		if (imageR == null || imageR.width <= 0 || imageR.height <= 0)
+		{
+			return;
+		}
+
+		int pad = Math.max(2, imageR.width / 20);
+		int maxDim = Math.max(8, Math.min(imageR.width, imageR.height) / 4);
+		int srcW = LOCK_BADGE_IMAGE.getWidth();
+		int srcH = LOCK_BADGE_IMAGE.getHeight();
+		if (srcW <= 0 || srcH <= 0)
+		{
+			return;
+		}
+		double ratio = Math.min((double) maxDim / srcW, (double) maxDim / srcH);
+		int w = Math.max(1, (int) Math.round(srcW * ratio));
+		int h = Math.max(1, (int) Math.round(srcH * ratio));
+		int x = imageR.x + imageR.width - w - pad;
+		int y = imageR.y + pad;
+		g2.drawImage(LOCK_BADGE_IMAGE, x, y, w, h, null);
 	}
 }

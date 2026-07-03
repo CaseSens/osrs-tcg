@@ -5,10 +5,15 @@ import com.osrstcg.model.OwnedCardInstance;
 import com.osrstcg.model.RewardTuningState;
 import com.osrstcg.party.TcgCardGiftPartyMessage;
 import com.osrstcg.party.TcgCardGiftResponsePartyMessage;
+import com.osrstcg.ui.collectionalbum.AlbumInstanceTooltip;
 import com.osrstcg.ui.collectionalbum.CollectionAlbumManager;
 import com.osrstcg.util.TcgPluginGameMessages;
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -102,9 +107,13 @@ public class CardPartyTransferService
 		OwnedCardInstance inst;
 		synchronized (stateService)
 		{
-			java.util.Optional<OwnedCardInstance> pick = stateService.firstInstanceFifo(name, foil);
+			Optional<OwnedCardInstance> pick = firstUnlockedInstanceFifo(name, foil);
 			if (pick.isEmpty())
 			{
+				if (ownsLockedVariantOnly(name, foil))
+				{
+					return AlbumInstanceTooltip.LOCKED_ACTION_HINT;
+				}
 				return "You do not own that card variant.";
 			}
 			inst = pick.get();
@@ -165,6 +174,41 @@ public class CardPartyTransferService
 		return null;
 	}
 
+	private Optional<OwnedCardInstance> firstUnlockedInstanceFifo(String cardName, boolean foil)
+	{
+		List<OwnedCardInstance> matches = new ArrayList<>();
+		for (OwnedCardInstance i : stateService.getState().getCollectionState().getOwnedInstances())
+		{
+			if (cardName.equalsIgnoreCase(i.getCardName()) && foil == i.isFoil() && !i.isLocked())
+			{
+				matches.add(i);
+			}
+		}
+		if (matches.isEmpty())
+		{
+			return Optional.empty();
+		}
+		matches.sort(Comparator.comparingLong(OwnedCardInstance::getPulledAtEpochMs));
+		return Optional.of(matches.get(0));
+	}
+
+	private boolean ownsLockedVariantOnly(String cardName, boolean foil)
+	{
+		boolean hasVariant = false;
+		for (OwnedCardInstance i : stateService.getState().getCollectionState().getOwnedInstances())
+		{
+			if (cardName.equalsIgnoreCase(i.getCardName()) && foil == i.isFoil())
+			{
+				hasVariant = true;
+				if (!i.isLocked())
+				{
+					return false;
+				}
+			}
+		}
+		return hasVariant;
+	}
+
 	private String beginGiftTransfer(long recipientMemberId, OwnedCardInstance inst)
 	{
 		if (inst == null)
@@ -176,19 +220,27 @@ public class CardPartyTransferService
 		{
 			return "Select a card to send.";
 		}
+		if (inst.isLocked())
+		{
+			return AlbumInstanceTooltip.LOCKED_ACTION_HINT;
+		}
 		boolean foil = inst.isFoil();
 		String instanceId = inst.getInstanceId();
 		RewardTuningState tuning;
 		boolean senderDebugLogging;
 		synchronized (stateService)
 		{
-			java.util.Optional<OwnedCardInstance> cur = stateService.getState().getCollectionState()
+			Optional<OwnedCardInstance> cur = stateService.getState().getCollectionState()
 				.findInstanceById(instanceId);
 			if (cur.isEmpty())
 			{
 				return "You do not own that card copy.";
 			}
 			inst = cur.get();
+			if (inst.isLocked())
+			{
+				return AlbumInstanceTooltip.LOCKED_ACTION_HINT;
+			}
 			tuning = stateService.getState().getRewardTuning();
 			senderDebugLogging = stateService.isDebugLogging();
 		}

@@ -135,6 +135,29 @@ public final class CollectionState
 		return new CollectionState(next);
 	}
 
+	public CollectionState withInstanceLockToggled(String instanceId)
+	{
+		if (instanceId == null || instanceId.isEmpty())
+		{
+			return this;
+		}
+		List<OwnedCardInstance> next = new ArrayList<>(instances.size());
+		boolean changed = false;
+		for (OwnedCardInstance i : instances)
+		{
+			if (instanceId.equals(i.getInstanceId()))
+			{
+				next.add(i.withLocked(!i.isLocked()));
+				changed = true;
+			}
+			else
+			{
+				next.add(i);
+			}
+		}
+		return changed ? new CollectionState(next) : this;
+	}
+
 	/**
 	 * Returns a collection with instances removed whose provenance is debug-marked ({@link OwnedCardInstance#hasDebugPullMetadata}).
 	 */

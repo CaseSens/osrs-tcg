@@ -367,6 +367,23 @@ public class TcgStateService
 		save();
 	}
 
+	public synchronized boolean toggleCardInstanceLock(String instanceId)
+	{
+		if (instanceId == null || instanceId.isEmpty())
+		{
+			return false;
+		}
+		CollectionState before = state.getCollectionState();
+		CollectionState after = before.withInstanceLockToggled(instanceId);
+		if (after == before)
+		{
+			return false;
+		}
+		state = state.withCollection(after);
+		save();
+		return true;
+	}
+
 	public synchronized boolean applyPackOpenTransaction(long packPrice, List<PackCardResult> pulls, String pullerDisplayName)
 	{
 		return applyPackOpenTransaction(packPrice, pulls, false, pullerDisplayName);

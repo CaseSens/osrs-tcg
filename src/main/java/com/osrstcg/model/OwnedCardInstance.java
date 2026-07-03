@@ -20,9 +20,16 @@ public final class OwnedCardInstance
 	private final boolean foil;
 	private final String pulledByUsername;
 	private final long pulledAtEpochMs;
+	private final boolean locked;
 
 	public OwnedCardInstance(String instanceId, String cardName, boolean foil, String pulledByUsername,
 		long pulledAtEpochMs)
+	{
+		this(instanceId, cardName, foil, pulledByUsername, pulledAtEpochMs, false);
+	}
+
+	public OwnedCardInstance(String instanceId, String cardName, boolean foil, String pulledByUsername,
+		long pulledAtEpochMs, boolean locked)
 	{
 		this.instanceId = instanceId == null || instanceId.isEmpty()
 			? UUID.randomUUID().toString()
@@ -31,6 +38,16 @@ public final class OwnedCardInstance
 		this.foil = foil;
 		this.pulledByUsername = pulledByUsername == null ? "" : pulledByUsername;
 		this.pulledAtEpochMs = Math.max(0L, pulledAtEpochMs);
+		this.locked = locked;
+	}
+
+	public OwnedCardInstance withLocked(boolean nextLocked)
+	{
+		if (locked == nextLocked)
+		{
+			return this;
+		}
+		return new OwnedCardInstance(instanceId, cardName, foil, pulledByUsername, pulledAtEpochMs, nextLocked);
 	}
 
 	public static OwnedCardInstance createNew(String cardName, boolean foil, String pulledByUsername, long pulledAtEpochMs)
@@ -97,6 +114,11 @@ public final class OwnedCardInstance
 	public long getPulledAtEpochMs()
 	{
 		return pulledAtEpochMs;
+	}
+
+	public boolean isLocked()
+	{
+		return locked;
 	}
 
 	@Override

@@ -11,7 +11,7 @@ import com.osrstcg.model.OwnedCardInstance;
 import com.osrstcg.model.RewardTuningState;
 import com.osrstcg.model.TcgState;
 import com.osrstcg.service.CreditAwardService;
-import com.osrstcg.service.DuplicateSellCredits;
+import com.osrstcg.service.DuplicateSellPlanner;
 import com.osrstcg.service.PackOpeningService;
 import com.osrstcg.service.PackRevealService;
 import com.osrstcg.service.PackSafeModeService;
@@ -30,7 +30,6 @@ import java.net.URL;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -800,7 +799,7 @@ public class TcgPanel extends PluginPanel
 		target.add(imageStatPanel("Credits", format(snap.credits),"/credits.png"));
 		target.add(Box.createRigidArea(new Dimension(0, 8)));
 		target.add(sellDuplicatesPanel());
-		updateSellDuplicatesButtonState(snap.owned);
+		updateSellDuplicatesButtonState();
 		target.add(Box.createRigidArea(new Dimension(0, 8)));
 		target.add(boosterShopPanelFromPrecalc(snap.credits, shopRows));
 	}
@@ -1408,7 +1407,7 @@ public class TcgPanel extends PluginPanel
 		target.add(imageStatPanel("Credits", format(displaySnap.credits),"/credits.png"));
 		target.add(Box.createRigidArea(new Dimension(0, 8)));
 		target.add(sellDuplicatesPanel());
-		updateSellDuplicatesButtonState(displaySnap.owned);
+		updateSellDuplicatesButtonState();
 		target.add(Box.createRigidArea(new Dimension(0, 8)));
 		target.add(boosterShopPanel(displaySnap));
 	}
@@ -1650,43 +1649,12 @@ public class TcgPanel extends PluginPanel
 		return panel;
 	}
 
-	private void updateSellDuplicatesButtonState(Map<CardCollectionKey, Integer> owned)
+	private void updateSellDuplicatesButtonState()
 	{
-		boolean hasDuplicates = hasSellableDuplicates(owned);
+		List<OwnedCardInstance> instances = stateService.getState().getCollectionState().getOwnedInstances();
+		boolean hasDuplicates = DuplicateSellPlanner.hasSellableDuplicates(instances);
 		sellDuplicatesButton.setEnabled(hasDuplicates);
 		sellDuplicatesButton.setToolTipText(hasDuplicates ? null : "No duplicate cards to sell.");
-	}
-
-	/** True when any card name has more than one owned copy (foil + normal combined), matching {@link #promptAndSellDuplicates}. */
-	private static boolean hasSellableDuplicates(Map<CardCollectionKey, Integer> owned)
-	{
-		if (owned == null || owned.isEmpty())
-		{
-			return false;
-		}
-		Map<String, Integer> qtyByName = new HashMap<>();
-		for (Map.Entry<CardCollectionKey, Integer> entry : owned.entrySet())
-		{
-			CardCollectionKey key = entry.getKey();
-			if (key == null || key.getCardName() == null)
-			{
-				continue;
-			}
-			int qty = entry.getValue() == null ? 0 : entry.getValue();
-			if (qty <= 0)
-			{
-				continue;
-			}
-			qtyByName.merge(key.getCardName(), qty, Integer::sum);
-		}
-		for (int total : qtyByName.values())
-		{
-			if (total > 1)
-			{
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private void promptAndSellDuplicates()
@@ -1699,62 +1667,9 @@ public class TcgPanel extends PluginPanel
 			return;
 		}
 
-		Map<String, List<OwnedCardInstance>> byName = new HashMap<>();
-		for (OwnedCardInstance i : all)
-		{
-			String n = i.getCardName();
-			byName.computeIfAbsent(n, k -> new ArrayList<>()).add(i);
-		}
-
-		List<OwnedCardInstance> kept = new ArrayList<>();
-		long creditsToAdd = 0L;
-		int cardsSold = 0;
-
-		for (Map.Entry<String, List<OwnedCardInstance>> entry : byName.entrySet())
-		{
-			String name = entry.getKey();
-			List<OwnedCardInstance> lst = entry.getValue();
-			int qF = (int) lst.stream().filter(OwnedCardInstance::isFoil).count();
-			int qN = lst.size() - qF;
-			int total = qF + qN;
-			if (total <= 1)
-			{
-				kept.addAll(lst);
-				continue;
-			}
-
-			CardDefinition def = cardDefinitionForName(name);
-			long normalCredits = DuplicateSellCredits.creditsForCard(def, false);
-			long foilCredits = DuplicateSellCredits.creditsForCard(def, true);
-			if (qF > 0)
-			{
-				lst.stream()
-					.filter(OwnedCardInstance::isFoil)
-					.max(Comparator.comparingLong(OwnedCardInstance::getPulledAtEpochMs))
-					.ifPresent(kept::add);
-				int foilSold = qF - 1;
-				int normalSold = qN;
-				int sold = foilSold + normalSold;
-				if (sold > 0)
-				{
-					cardsSold += sold;
-					creditsToAdd += foilCredits * foilSold + normalCredits * normalSold;
-				}
-			}
-			else
-			{
-				lst.stream()
-					.filter(i -> !i.isFoil())
-					.max(Comparator.comparingLong(OwnedCardInstance::getPulledAtEpochMs))
-					.ifPresent(kept::add);
-				int sold = qN - 1;
-				if (sold > 0)
-				{
-					cardsSold += sold;
-					creditsToAdd += normalCredits * sold;
-				}
-			}
-		}
+		DuplicateSellPlanner.Result plan = DuplicateSellPlanner.plan(all, this::cardDefinitionForName);
+		int cardsSold = plan.getCardsSold();
+		long creditsToAdd = plan.getCreditsToAdd();
 
 		if (cardsSold <= 0)
 		{
@@ -1773,7 +1688,7 @@ public class TcgPanel extends PluginPanel
 			return;
 		}
 
-		stateService.setCollectionInstances(kept);
+		stateService.setCollectionInstances(plan.getKept());
 		if (creditsToAdd > 0L)
 		{
 			stateService.addCredits(creditsToAdd);

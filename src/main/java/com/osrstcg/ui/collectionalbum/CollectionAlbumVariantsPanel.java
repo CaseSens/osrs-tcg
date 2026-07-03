@@ -8,7 +8,6 @@ import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
@@ -25,6 +24,7 @@ import java.util.function.Consumer;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 /**
  * Same card-face grid style as the main album ({@link CollectionAlbumGridPanel}), 7×3 with paging past 21 copies.
@@ -40,6 +40,7 @@ public final class CollectionAlbumVariantsPanel extends JPanel
 
 	private final WikiImageCacheService imageCacheService;
 	private final Consumer<OwnedCardInstance> onPick;
+	private final Consumer<OwnedCardInstance> onLockToggle;
 	private final VariantGrid variantGrid;
 
 	private JButton pagingPrevBtn;
@@ -53,11 +54,13 @@ public final class CollectionAlbumVariantsPanel extends JPanel
 	private int variantPageIndex;
 	private String selectedInstanceId;
 
-	public CollectionAlbumVariantsPanel(WikiImageCacheService imageCacheService, Consumer<OwnedCardInstance> onPick)
+	public CollectionAlbumVariantsPanel(WikiImageCacheService imageCacheService, Consumer<OwnedCardInstance> onPick,
+		Consumer<OwnedCardInstance> onLockToggle)
 	{
 		super(new BorderLayout());
 		this.imageCacheService = imageCacheService;
 		this.onPick = onPick;
+		this.onLockToggle = onLockToggle;
 		this.variantGrid = new VariantGrid();
 		setOpaque(true);
 		setBackground(new Color(0x1E1E1E));
@@ -206,14 +209,48 @@ public final class CollectionAlbumVariantsPanel extends JPanel
 				@Override
 				public void mousePressed(MouseEvent e)
 				{
+					if (tryLockToggle(e))
+					{
+						return;
+					}
 					handlePress(e);
+				}
+
+				@Override
+				public void mouseReleased(MouseEvent e)
+				{
+					tryLockToggle(e);
 				}
 			});
 		}
 
+		private boolean tryLockToggle(MouseEvent e)
+		{
+			if (e == null || !e.isPopupTrigger() || onLockToggle == null)
+			{
+				return false;
+			}
+			int from = variantPageIndex * PAGE_SIZE;
+			for (int i = 0; i < lastCardBounds.size(); i++)
+			{
+				Rectangle r = lastCardBounds.get(i);
+				if (r != null && r.contains(e.getPoint()))
+				{
+					int gi = from + i;
+					if (gi >= 0 && gi < allCopies.size())
+					{
+						onLockToggle.accept(allCopies.get(gi));
+						return true;
+					}
+					return false;
+				}
+			}
+			return false;
+		}
+
 		private void handlePress(MouseEvent e)
 		{
-			if (e == null)
+			if (e == null || SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger())
 			{
 				return;
 			}
@@ -323,6 +360,10 @@ public final class CollectionAlbumVariantsPanel extends JPanel
 					BufferedImage art = imageCacheService.getCached(card == null ? null : card.getImageUrl());
 					boolean foil = inst.isFoil();
 					SharedCardRenderer.drawCardFace(g2, bounds, card, foil, rarityColor, art, 0L, foil);
+					if (inst.isLocked())
+					{
+						SharedCardRenderer.drawLockBadge(g2, bounds);
+					}
 
 					if (selectedInstanceId != null && selectedInstanceId.equals(inst.getInstanceId()))
 					{

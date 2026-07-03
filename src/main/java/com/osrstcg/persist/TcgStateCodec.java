@@ -72,7 +72,7 @@ public class TcgStateCodec
 				String id = row.id == null || row.id.trim().isEmpty() ? null : row.id.trim();
 				String by = row.pulledBy == null ? "" : row.pulledBy;
 				long at = row.pulledAt <= 0L ? 0L : row.pulledAt;
-				rows.add(new OwnedCardInstance(id, row.cardName.trim(), row.foil, by, at));
+				rows.add(new OwnedCardInstance(id, row.cardName.trim(), row.foil, by, at, row.locked));
 			}
 		}
 		CollectionState coll = CollectionState.copyOf(rows);
@@ -129,6 +129,7 @@ public class TcgStateCodec
 			row.foil = inst.isFoil();
 			row.pulledBy = inst.getPulledByUsername();
 			row.pulledAt = inst.getPulledAtEpochMs();
+			row.locked = inst.isLocked();
 			serialized.cardInstances.add(row);
 		}
 
@@ -158,5 +159,6 @@ public class TcgStateCodec
 		private boolean foil;
 		private String pulledBy;
 		private long pulledAt;
+		private boolean locked;
 	}
 }

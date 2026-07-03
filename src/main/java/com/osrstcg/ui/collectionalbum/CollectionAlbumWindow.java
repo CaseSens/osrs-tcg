@@ -87,6 +87,7 @@ public final class CollectionAlbumWindow extends JFrame
 
 	private static final String PARTY_SEND_TOOLTIP =
 		"You and the recipient must both be in the same RuneLite party with OSRS TCG installed to send cards.";
+	private static final String LOCKED_CARD_ACTION_TOOLTIP = AlbumInstanceTooltip.LOCKED_ACTION_HINT;
 	private static final int PAGE_SIZE = 21;
 	private static final String RARITY_FILTER_ALL = "All";
 	private static final List<String> RARITY_TIERS_LOW_TO_HIGH = List.of(
@@ -180,8 +181,9 @@ public final class CollectionAlbumWindow extends JFrame
 		this.cardPartyTransferService = cardPartyTransferService;
 		this.debugCardEditGate = debugCardEditGate;
 		this.grid = new CollectionAlbumGridPanel(imageCacheService, debugCardCatalogEditFacade,
-			this::onOwnedMultiCopyAlbumPress, this::onSlotSelectionChanged);
-		this.variantsPanel = new CollectionAlbumVariantsPanel(imageCacheService, this::onVariantInstancePicked);
+			this::onOwnedMultiCopyAlbumPress, this::onAlbumCardLockToggle, this::onSlotSelectionChanged);
+		this.variantsPanel = new CollectionAlbumVariantsPanel(imageCacheService, this::onVariantInstancePicked,
+			this::onVariantCardLockToggle);
 
 		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		setMinimumSize(new Dimension(
@@ -927,7 +929,18 @@ public final class CollectionAlbumWindow extends JFrame
 			int nQty = nf == null ? 0 : nf;
 			int fQty = ff == null ? 0 : ff;
 			String singleTip = singleCopyAlbumHoverTooltip(name, nQty, fQty, ownAny);
-			slots.add(new AlbumSlot(c, rarity, ownAny, displayFoil, nQty, fQty, singleTip));
+			boolean lockBadge = false;
+			String soleInstanceId = null;
+			if (ownAny)
+			{
+				List<OwnedCardInstance> row = stateService.getState().getCollectionState().instancesForCardName(name);
+				lockBadge = row.stream().anyMatch(OwnedCardInstance::isLocked);
+				if (row.size() == 1)
+				{
+					soleInstanceId = row.get(0).getInstanceId();
+				}
+			}
+			slots.add(new AlbumSlot(c, rarity, ownAny, displayFoil, nQty, fQty, singleTip, lockBadge, soleInstanceId));
 		}
 		grid.setSlots(slots, selectionPreserveIndex(slots));
 		updatePageControls(from, to);
@@ -1160,6 +1173,58 @@ public final class CollectionAlbumWindow extends JFrame
 		updateSouthBarButtons();
 	}
 
+	private void onAlbumCardLockToggle(AlbumSlot slot)
+	{
+		if (slot == null || slot.soleInstanceId() == null)
+		{
+			return;
+		}
+		if (stateService.toggleCardInstanceLock(slot.soleInstanceId()))
+		{
+			refreshCurrentPage();
+			updateSouthBarButtons();
+		}
+	}
+
+	private void onVariantCardLockToggle(OwnedCardInstance inst)
+	{
+		if (inst == null)
+		{
+			return;
+		}
+		if (stateService.toggleCardInstanceLock(inst.getInstanceId()))
+		{
+			refreshActiveVariantCopies();
+		}
+	}
+
+	private void refreshActiveVariantCopies()
+	{
+		if (!albumVariantsVisible || sendFocusCardName == null)
+		{
+			return;
+		}
+		String cardName = sendFocusCardName.trim();
+		if (cardName.isEmpty())
+		{
+			return;
+		}
+		List<OwnedCardInstance> copies = new ArrayList<>(
+			stateService.getState().getCollectionState().instancesForCardName(cardName));
+		if (copies.size() < 2)
+		{
+			exitAlbumVariantView();
+			rebuildModel();
+			return;
+		}
+		copies.sort(Comparator.comparing(OwnedCardInstance::isFoil).reversed()
+			.thenComparingLong(OwnedCardInstance::getPulledAtEpochMs));
+		Color rarity = rarityTable.colorForCardName(cardName);
+		CardDefinition def = cardDefinitionForName(cardName);
+		variantsPanel.setVariants(def, rarity, copies, sendChosenInstanceId);
+		updateSouthBarButtons();
+	}
+
 	private void refreshPartyMemberCombo()
 	{
 		int prevSel = partyMemberCombo.getSelectedIndex();
@@ -1283,6 +1348,7 @@ public final class CollectionAlbumWindow extends JFrame
 		boolean selectionOk = gridSlotOk || variantSendOk;
 		boolean idOk = sendChosenInstanceId != null && !sendChosenInstanceId.isEmpty()
 			&& stateService.getState().getCollectionState().findInstanceById(sendChosenInstanceId).isPresent();
+		boolean locked = isChosenInstanceLocked();
 
 		if (!selectionOk || !idOk)
 		{
@@ -1292,7 +1358,18 @@ public final class CollectionAlbumWindow extends JFrame
 			return;
 		}
 
-		sendCardBtn.setEnabled(recipientOk && idOk);
+		if (locked)
+		{
+			sendCardBtn.setEnabled(false);
+			sendCardBtn.setToolTipText(LOCKED_CARD_ACTION_TOOLTIP);
+			sellCardBtn.setText("Sell");
+			sellCardBtn.setEnabled(false);
+			sellCardBtn.setToolTipText(LOCKED_CARD_ACTION_TOOLTIP);
+			return;
+		}
+
+		sendCardBtn.setEnabled(recipientOk);
+		sendCardBtn.setToolTipText(recipientOk ? null : PARTY_SEND_TOOLTIP);
 
 		long sellValue = sellCreditsForChosenInstance();
 		sellCardBtn.setText("Sell for " + NumberFormatting.format(sellValue));
@@ -1305,6 +1382,17 @@ public final class CollectionAlbumWindow extends JFrame
 		{
 			sellCardBtn.setToolTipText(null);
 		}
+	}
+
+	private boolean isChosenInstanceLocked()
+	{
+		if (sendChosenInstanceId == null || sendChosenInstanceId.isEmpty())
+		{
+			return false;
+		}
+		return stateService.getState().getCollectionState().findInstanceById(sendChosenInstanceId)
+			.map(OwnedCardInstance::isLocked)
+			.orElse(false);
 	}
 
 	private long sellCreditsForChosenInstance()
@@ -1348,6 +1436,10 @@ public final class CollectionAlbumWindow extends JFrame
 	private void sellSelectedCard(boolean debugQuickSell)
 	{
 		if (sendChosenInstanceId == null || sendChosenInstanceId.isEmpty())
+		{
+			return;
+		}
+		if (isChosenInstanceLocked())
 		{
 			return;
 		}
@@ -1426,6 +1518,11 @@ public final class CollectionAlbumWindow extends JFrame
 		}
 		if (sendChosenInstanceId == null || sendChosenInstanceId.isEmpty())
 		{
+			return;
+		}
+		if (isChosenInstanceLocked())
+		{
+			sendStatusLabel.setText(LOCKED_CARD_ACTION_TOOLTIP);
 			return;
 		}
 		sendCardBtn.setEnabled(false);

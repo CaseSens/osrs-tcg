@@ -20,7 +20,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import net.runelite.client.ui.FontManager;
 
 final class CollectionAlbumGridPanel extends JPanel
@@ -34,6 +36,7 @@ final class CollectionAlbumGridPanel extends JPanel
 	private final WikiImageCacheService imageCacheService;
 	private final DebugCardCatalogEditFacade debugCardCatalogEditFacade;
 	private final BiConsumer<Integer, AlbumSlot> ownedMultiCopyPressed;
+	private final Consumer<AlbumSlot> onLockToggle;
 	private final Runnable onSelectionChanged;
 	private List<AlbumSlot> slots = Collections.emptyList();
 	private List<Rectangle> lastCardBounds = Collections.emptyList();
@@ -42,11 +45,13 @@ final class CollectionAlbumGridPanel extends JPanel
 	CollectionAlbumGridPanel(WikiImageCacheService imageCacheService,
 		DebugCardCatalogEditFacade debugCardCatalogEditFacade,
 		BiConsumer<Integer, AlbumSlot> ownedMultiCopyPressed,
+		Consumer<AlbumSlot> onLockToggle,
 		Runnable onSelectionChanged)
 	{
 		this.imageCacheService = imageCacheService;
 		this.debugCardCatalogEditFacade = debugCardCatalogEditFacade;
 		this.ownedMultiCopyPressed = ownedMultiCopyPressed;
+		this.onLockToggle = onLockToggle;
 		this.onSelectionChanged = onSelectionChanged == null ? () -> {} : onSelectionChanged;
 		setOpaque(true);
 		setBackground(new Color(0x1E1E1E));
@@ -63,13 +68,21 @@ final class CollectionAlbumGridPanel extends JPanel
 				{
 					return;
 				}
+				if (tryLockToggle(e))
+				{
+					return;
+				}
 				handlePress(e);
 			}
 
 			@Override
 			public void mouseReleased(MouseEvent e)
 			{
-				tryDebugContextMenu(e);
+				if (tryDebugContextMenu(e))
+				{
+					return;
+				}
+				tryLockToggle(e);
 			}
 		});
 	}
@@ -109,6 +122,26 @@ final class CollectionAlbumGridPanel extends JPanel
 		return debugCardCatalogEditFacade.tryShowAlbumCardContextMenu(e, this, slot);
 	}
 
+	private boolean tryLockToggle(MouseEvent e)
+	{
+		if (e == null || !e.isPopupTrigger() || onLockToggle == null)
+		{
+			return false;
+		}
+		int idx = hitTestSlotIndex(e);
+		if (idx < 0 || idx >= slots.size())
+		{
+			return false;
+		}
+		AlbumSlot slot = slots.get(idx);
+		if (slot == null || !slot.ownedAny() || slot.soleInstanceId() == null)
+		{
+			return false;
+		}
+		onLockToggle.accept(slot);
+		return true;
+	}
+
 	private int hitTestSlotIndex(MouseEvent e)
 	{
 		for (int i = 0; i < lastCardBounds.size(); i++)
@@ -124,7 +157,7 @@ final class CollectionAlbumGridPanel extends JPanel
 
 	private void handlePress(MouseEvent e)
 	{
-		if (e == null)
+		if (e == null || SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger())
 		{
 			return;
 		}
@@ -306,6 +339,10 @@ final class CollectionAlbumGridPanel extends JPanel
 				}
 				boolean foilScoreLabel = slot.ownedAny() && slot.displayFoil();
 				SharedCardRenderer.drawCardFace(g2, bounds, card, slot.displayFoil(), rarity, art, 0L, foilScoreLabel);
+				if (slot.lockBadge())
+				{
+					SharedCardRenderer.drawLockBadge(g2, bounds);
+				}
 				if (!slot.ownedAny())
 				{
 					g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
