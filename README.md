@@ -8,6 +8,13 @@ The plugin features party plugin integration that allows you to trade cards with
 
 ![Collection album](https://i.imgur.com/H28xZfZ.png)
 
+## Planned Features
+
+- More filtering options for album view
+- Ability to lock individual cards from being sold by bulk sell
+- Webhook or [Dink](https://github.com/pajlads/DinkPlugin) integration
+- More booster packs
+
 ## Acknowledgments
 
 Parts of this plugin were inspired by other RuneLite plugins:
