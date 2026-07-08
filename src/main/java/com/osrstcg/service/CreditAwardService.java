@@ -24,6 +24,12 @@ public class CreditAwardService
 {
 	private static final long XP_PER_CREDIT_CHUNK = 1000L;
 	private static final long CREDITS_PER_CHUNK = 100L;
+	/** Level-up bonus at levels 1–2; base of the exponential curve to level 99. */
+	private static final int LEVEL_UP_REWARD_FLOOR = 1_250;
+	/** Level-up bonus when reaching level 99. */
+	private static final int LEVEL_UP_REWARD_CAP = 25_000;
+	private static final int LEVEL_UP_PROGRESS_LEVELS = 97;
+	private static final double LEVEL_UP_CURVE_STEEPNESS = 2.5d;
 	/** Ignore bogus fake XP drop payloads. */
 	private static final int FAKE_XP_DROP_SANITY_CAP = 20_000_000;
 	/** Suppress credit awards while stats settle after login or a world hop. */
@@ -381,8 +387,15 @@ public class CreditAwardService
 	private int levelUpReward(int level)
 	{
 		int clamped = clampLevel(level);
-		double reward = 100.0d + (clamped - 1) * (25000.0d - 100.0d) / 98.0d;
-		return (int) Math.round(reward);
+		if (clamped <= 2)
+		{
+			return LEVEL_UP_REWARD_FLOOR;
+		}
+
+		double progress = (clamped - 2.0d) / LEVEL_UP_PROGRESS_LEVELS;
+		double curve = Math.pow(progress, LEVEL_UP_CURVE_STEEPNESS);
+		double multiplier = Math.pow((double) LEVEL_UP_REWARD_CAP / LEVEL_UP_REWARD_FLOOR, curve);
+		return (int) Math.round(LEVEL_UP_REWARD_FLOOR * multiplier);
 	}
 
 	private int clampLevel(int level)
