@@ -32,6 +32,12 @@ public final class GameMessageCreditTracker
 	private static final long ROYAL_TITANS_KILL_CREDITS = 525L;
 	private static final String ROYAL_TITANS_KILL_PREFIX = "Your Royal Titans kill count is:";
 
+	private static final long NIGHTMARE_KILL_CREDITS = 814L;
+	private static final String NIGHTMARE_KILL_PREFIX = "Your Nightmare kill count is:";
+
+	private static final long PHOSANIS_NIGHTMARE_KILL_CREDITS = 1_024L;
+	private static final String PHOSANIS_NIGHTMARE_KILL_PREFIX = "Your Phosani's Nightmare kill count is:";
+
 	private static final List<CreditRule> CREDIT_RULES = buildCreditRules();
 
 	private static List<CreditRule> buildCreditRules()
@@ -57,6 +63,14 @@ public final class GameMessageCreditTracker
 			ROYAL_TITANS_KILL_PREFIX,
 			ROYAL_TITANS_KILL_CREDITS,
 			"Royal Titans kill"));
+		rules.add(CreditRule.prefix(
+			NIGHTMARE_KILL_PREFIX,
+			NIGHTMARE_KILL_CREDITS,
+			"The Nightmare kill"));
+		rules.add(CreditRule.prefix(
+			PHOSANIS_NIGHTMARE_KILL_PREFIX,
+			PHOSANIS_NIGHTMARE_KILL_CREDITS,
+			"Phosani's Nightmare kill"));
 		return List.copyOf(rules);
 	}
 

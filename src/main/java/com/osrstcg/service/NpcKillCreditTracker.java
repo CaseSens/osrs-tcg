@@ -32,8 +32,6 @@ public final class NpcKillCreditTracker
 	/** Boss display name -> NPC ids that count as the real kill (final phase only). */
 	private static final Map<String, Set<Integer>> FINAL_PHASE_IDS = Map.ofEntries(
 		Map.entry("Kalphite Queen", Set.of(965)),
-		Map.entry("The Nightmare", Set.of(378)),
-		Map.entry("Phosani's Nightmare", Set.of(377)),
 		Map.entry("Phantom Muspah", Set.of(12082)),
 		Map.entry("Abyssal Sire", Set.of(5891)),
 		Map.entry("Kephri", Set.of(11722)),
@@ -52,6 +50,9 @@ public final class NpcKillCreditTracker
 		NpcExclusionRule.npcIds(ExcludedNpcIds.AMOXLIATL_UNSTABLE_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.CRACKED_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.GREAT_OLM),
+		NpcExclusionRule.exactName("The Nightmare"),
+		NpcExclusionRule.exactName("Phosani's Nightmare"),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.THE_NIGHTMARE),
 	};
 
 	private final Client client;
@@ -271,6 +272,11 @@ public final class NpcKillCreditTracker
 
 		/** Great Olm — head and claws, normal and challenge mode (kill credits via {@link GameMessageCreditTracker}). */
 		static final Set<Integer> GREAT_OLM = Set.of(7550, 7551, 7552, 7553, 7554, 7555);
+
+		/** The Nightmare — minions and non-kill phases (kill credits via {@link GameMessageCreditTracker}). */
+		static final Set<Integer> THE_NIGHTMARE = Set.of(
+			9417, 9418, 9420, 9421, 9422, 9424, 9435, 9438, 9441, 9444, 9445, 9446,
+			9466, 9467, 9469, 9470, 11153, 11154, 11155);
 
 		private ExcludedNpcIds()
 		{
