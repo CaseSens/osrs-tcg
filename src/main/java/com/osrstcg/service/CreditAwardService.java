@@ -43,6 +43,7 @@ public class CreditAwardService
 	private boolean skillXpInitialized;
 	private boolean creditAwardCooldownActive;
 	private int creditAwardCooldownUntilTick;
+	private boolean pendingStatsSettleAfterLoginOrHop;
 	private GameState lastObservedGameState;
 
 	/** XP from skill drops not yet converted into credit chunks. */
@@ -176,8 +177,26 @@ public class CreditAwardService
 	/** Call when the plugin is enabled mid-session so stats are not credited against empty baselines. */
 	public void onPluginStarted()
 	{
-		if (client != null && client.getGameState() == GameState.LOGGED_IN)
+		if (client == null)
 		{
+			return;
+		}
+
+		lastObservedGameState = client.getGameState();
+		GameState current = lastObservedGameState;
+		if (current == GameState.LOGIN_SCREEN)
+		{
+			pendingStatsSettleAfterLoginOrHop = true;
+			suppressCreditAwardsUntilStatsSettle(true);
+		}
+		else if (current == GameState.HOPPING)
+		{
+			pendingStatsSettleAfterLoginOrHop = true;
+			suppressCreditAwardsUntilStatsSettle(false);
+		}
+		else if (current == GameState.LOGGED_IN)
+		{
+			pendingStatsSettleAfterLoginOrHop = true;
 			suppressCreditAwardsUntilStatsSettle(false);
 		}
 	}
@@ -185,38 +204,60 @@ public class CreditAwardService
 	public void onGameStateChanged(GameStateChanged event)
 	{
 		GameState next = event.getGameState();
-		GameState previous = lastObservedGameState;
 		lastObservedGameState = next;
 
 		if (next == GameState.LOGIN_SCREEN)
 		{
+			pendingStatsSettleAfterLoginOrHop = true;
 			suppressCreditAwardsUntilStatsSettle(true);
 			return;
 		}
 
 		if (next == GameState.HOPPING)
 		{
+			pendingStatsSettleAfterLoginOrHop = true;
 			suppressCreditAwardsUntilStatsSettle(false);
 			return;
 		}
 
-		if (next == GameState.LOGGED_IN
-			&& (previous == GameState.LOGIN_SCREEN || previous == GameState.HOPPING || previous == GameState.LOADING))
+		if (next != GameState.LOGGED_IN)
 		{
-			suppressCreditAwardsUntilStatsSettle(previous == GameState.LOGIN_SCREEN);
+			return;
+		}
+
+		if (pendingStatsSettleAfterLoginOrHop)
+		{
+			// Tracking was already reset at login screen / hop; realign to post-login ticks only.
+			beginCreditAwardCooldown();
 		}
 	}
 
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		if (!creditAwardCooldownActive || isCreditAwardOnCooldown())
+		if (client == null || client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
 		}
 
-		creditAwardCooldownActive = false;
-		snapshotSkillBaselinesIfLoggedIn();
+		if (creditAwardCooldownActive)
+		{
+			if (isCreditAwardOnCooldown())
+			{
+				return;
+			}
+
+			creditAwardCooldownActive = false;
+			pendingStatsSettleAfterLoginOrHop = false;
+			snapshotSkillBaselinesIfLoggedIn();
+			debugAward("Credit award cooldown ended; resuming credit gains");
+			return;
+		}
+
+		if (!skillXpInitialized || !skillLevelsInitialized)
+		{
+			snapshotSkillBaselinesIfLoggedIn();
+		}
 	}
 
 	private void trackXpGainFromStatChanged(Skill skill, int currentXp)
@@ -312,7 +353,24 @@ public class CreditAwardService
 
 	private boolean isCreditAwardOnCooldown()
 	{
-		return creditAwardCooldownActive && client != null && client.getTickCount() < creditAwardCooldownUntilTick;
+		if (!creditAwardCooldownActive || client == null)
+		{
+			return false;
+		}
+
+		int tick = client.getTickCount();
+		if (tick >= creditAwardCooldownUntilTick)
+		{
+			return false;
+		}
+
+		// Cooldown armed before the tick counter reset (e.g. at the login screen).
+		if (creditAwardCooldownUntilTick - tick > CREDIT_AWARD_COOLDOWN_TICKS)
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	private void resetSkillCreditTracking(boolean clearUncreditedXpPool)
