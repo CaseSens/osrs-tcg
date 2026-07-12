@@ -32,7 +32,6 @@ public final class NpcKillCreditTracker
 	/** Boss display name -> NPC ids that count as the real kill (final phase only). */
 	private static final Map<String, Set<Integer>> FINAL_PHASE_IDS = Map.ofEntries(
 		Map.entry("Kalphite Queen", Set.of(965)),
-		Map.entry("Phantom Muspah", Set.of(12082)),
 		Map.entry("Abyssal Sire", Set.of(5891)),
 		Map.entry("Kephri", Set.of(11722)),
 		Map.entry("Verzik Vitur", Set.of(10832, 8371, 10849))
@@ -53,6 +52,7 @@ public final class NpcKillCreditTracker
 		NpcExclusionRule.exactName("The Nightmare"),
 		NpcExclusionRule.exactName("Phosani's Nightmare"),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.THE_NIGHTMARE),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.PHANTOM_MUSPAH),
 	};
 
 	private final Client client;
@@ -277,6 +277,10 @@ public final class NpcKillCreditTracker
 		static final Set<Integer> THE_NIGHTMARE = Set.of(
 			9417, 9418, 9420, 9421, 9422, 9424, 9435, 9438, 9441, 9444, 9445, 9446,
 			9466, 9467, 9469, 9470, 11153, 11154, 11155);
+
+		/** Phantom Muspah — all forms (kill credits via {@link GameMessageCreditTracker}). */
+		static final Set<Integer> PHANTOM_MUSPAH = Set.of(
+			12077, 12078, 12079, 12080, 12082, 15549);
 
 		private ExcludedNpcIds()
 		{

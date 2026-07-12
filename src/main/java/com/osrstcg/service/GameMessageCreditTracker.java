@@ -42,6 +42,9 @@ public final class GameMessageCreditTracker
 	private static final long PHOSANIS_NIGHTMARE_KILL_CREDITS = 1_024L;
 	private static final String PHOSANIS_NIGHTMARE_KILL_PREFIX = "Your Phosani's Nightmare kill count is:";
 
+	private static final long PHANTOM_MUSPAH_KILL_CREDITS = 741L;
+	private static final String PHANTOM_MUSPAH_KILL_PREFIX = "Your Phantom Muspah kill count is:";
+
 	private static final List<CreditRule> CREDIT_RULES = buildCreditRules();
 
 	private static List<CreditRule> buildCreditRules()
@@ -79,6 +82,10 @@ public final class GameMessageCreditTracker
 			PHOSANIS_NIGHTMARE_KILL_PREFIX,
 			PHOSANIS_NIGHTMARE_KILL_CREDITS,
 			"Phosani's Nightmare kill"));
+		rules.add(CreditRule.prefix(
+			PHANTOM_MUSPAH_KILL_PREFIX,
+			PHANTOM_MUSPAH_KILL_CREDITS,
+			"Phantom Muspah kill"));
 		return List.copyOf(rules);
 	}
 
