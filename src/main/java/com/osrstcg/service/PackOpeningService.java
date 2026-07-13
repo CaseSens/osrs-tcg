@@ -29,9 +29,6 @@ public class PackOpeningService
 	 */
 	private static final double TOP_TIER_SCORE_PULL_RARITY_RATIO = 3.0d;
 
-	/** Reserved pack id for the free debug booster (only usable when debug logging is enabled in saved state). */
-	public static final String DEBUG_PACK_ID = "osrstcg_debug_pack";
-
 	/** Normal packs: chance all five pulls are restricted to top three display tiers (Legendary / Mythic / Godly). */
 	private static final int APEX_PACK_CHANCE_DENOMINATOR = 3000;
 
@@ -63,9 +60,9 @@ public class PackOpeningService
 		this.random = random;
 	}
 
-	public static boolean isDebugPack(BoosterPackDefinition booster)
+	public static boolean isDebugOnlyRegionalPack(BoosterPackDefinition booster)
 	{
-		return booster != null && DEBUG_PACK_ID.equals(booster.getId());
+		return booster != null && booster.isDebugOnly();
 	}
 
 	public PackOpenResult buyAndOpenPack(BoosterPackDefinition booster)
@@ -96,19 +93,13 @@ public class PackOpeningService
 			return PackOpenResult.failed("Cannot open packs while in combat (Safe-mode).", creditsBefore, booster.getPrice());
 		}
 
-		boolean debugPack = isDebugPack(booster) && stateService.isDebugLogging();
-		if (isDebugPack(booster) && !debugPack)
+		if (isDebugOnlyRegionalPack(booster) && !stateService.isDebugLogging())
 		{
-			return PackOpenResult.failed("Debug pack is only available when debug logging is enabled.", creditsBefore, 0);
-		}
-
-		if (forceApexPack && debugPack)
-		{
-			return PackOpenResult.failed("Apex open is not available for the debug booster.", creditsBefore, 0);
+			return PackOpenResult.failed("Regional packs are only available in debug mode.", creditsBefore, 0);
 		}
 
 		int packPrice = booster.getPrice();
-		if (!debugPack && packPrice <= 0)
+		if (packPrice <= 0)
 		{
 			return PackOpenResult.failed("Invalid pack price.", creditsBefore, packPrice);
 		}
@@ -138,35 +129,30 @@ public class PackOpeningService
 		List<CardDefinition> packRollPool = pool;
 		boolean apexTopThreeTierOnly = false;
 		double foilChanceMultiplier = 1.0d;
-		if (!debugPack)
+		boolean rollApex = forceApexPack || random.nextInt(APEX_PACK_CHANCE_DENOMINATOR) == 0;
+		if (rollApex)
 		{
-			boolean rollApex = forceApexPack || random.nextInt(APEX_PACK_CHANCE_DENOMINATOR) == 0;
-			if (rollApex)
+			List<CardDefinition> apexPool = topThreeDisplayTierSubset(pool, rollPool);
+			if (!apexPool.isEmpty())
 			{
-				List<CardDefinition> apexPool = topThreeDisplayTierSubset(pool, rollPool);
-				if (!apexPool.isEmpty())
-				{
-					packRollPool = apexPool;
-					apexTopThreeTierOnly = true;
-					foilChanceMultiplier = APEX_PACK_FOIL_CHANCE_MULTIPLIER;
-				}
-				else if (forceApexPack)
-				{
-					return PackOpenResult.failed(
-						"No Legendary, Mythic, or Godly cards in this booster for an apex pack.", creditsBefore, packPrice);
-				}
+				packRollPool = apexPool;
+				apexTopThreeTierOnly = true;
+				foilChanceMultiplier = APEX_PACK_FOIL_CHANCE_MULTIPLIER;
+			}
+			else if (forceApexPack)
+			{
+				return PackOpenResult.failed(
+					"No Legendary, Mythic, or Godly cards in this booster for an apex pack.", creditsBefore, packPrice);
 			}
 		}
 
-		List<PackCardResult> pulls = debugPack
-			? rollDebugSameCardPack(pool)
-			: rollPack(packRollPool, rollPool, DEFAULT_PACK_SIZE, apexTopThreeTierOnly, foilChanceMultiplier);
+		List<PackCardResult> pulls = rollPack(packRollPool, rollPool, DEFAULT_PACK_SIZE, apexTopThreeTierOnly, foilChanceMultiplier);
 		Map<CardCollectionKey, Integer> ownedBefore;
 		synchronized (stateService)
 		{
 			ownedBefore = new HashMap<>(stateService.getState().getCollectionState().getOwnedCards());
 		}
-		if (!stateService.applyPackOpenTransaction(packPrice, pulls, debugPack, localPullerDisplayName()))
+		if (!stateService.applyPackOpenTransaction(packPrice, pulls, localPullerDisplayName()))
 		{
 			return PackOpenResult.failed("Pack transaction failed.", creditsBefore, packPrice);
 		}
@@ -188,38 +174,6 @@ public class PackOpeningService
 		String packId = booster.getId() == null ? "" : booster.getId().trim();
 		return PackOpenResult.succeeded("Pack opened.", creditsBefore, creditsAfter, packPrice, pulls,
 			booster.getName(), packId, apexTopThreeTierOnly);
-	}
-
-	private List<PackCardResult> rollDebugSameCardPack(List<CardDefinition> pool)
-	{
-		List<CardDefinition> valid = new ArrayList<>();
-		for (CardDefinition c : pool)
-		{
-			if (c == null)
-			{
-				continue;
-			}
-			String n = c.getName();
-			if (n != null && !n.trim().isEmpty())
-			{
-				valid.add(c);
-			}
-		}
-		if (valid.isEmpty())
-		{
-			return List.of();
-		}
-		CardDefinition pick = valid.get(random.nextInt(valid.size()));
-		String name = pick.getName();
-		int foilPercent = stateService.getState().getRewardTuning().getFoilChancePercent();
-		double foilChance = Math.max(0, Math.min(100, foilPercent)) / 100.0d;
-		List<PackCardResult> pulls = new ArrayList<>(DEFAULT_PACK_SIZE);
-		for (int i = 0; i < DEFAULT_PACK_SIZE; i++)
-		{
-			boolean foil = random.nextDouble() < foilChance;
-			pulls.add(new PackCardResult(name, foil));
-		}
-		return pulls;
 	}
 
 	/**

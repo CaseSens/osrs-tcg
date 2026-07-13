@@ -1,6 +1,7 @@
 package com.osrstcg;
 
 import com.google.inject.Provides;
+import com.osrstcg.data.BoosterPackDefinition;
 import com.osrstcg.data.CardDatabase;
 import com.osrstcg.data.CardDefinition;
 import com.osrstcg.data.PackCatalog;
@@ -577,7 +578,8 @@ public class OsrsTcgPlugin extends Plugin
 
 	private void handleOpenFirstBoosterCommand(boolean forcedApex)
 	{
-		if (packCatalog.getBoosters().isEmpty())
+		List<BoosterPackDefinition> visibleBoosters = packCatalog.getVisibleBoosters(stateService.isDebugLogging());
+		if (visibleBoosters.isEmpty())
 		{
 			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "[OSRS TCG] No booster packs loaded.", null);
 			return;
@@ -587,8 +589,8 @@ public class OsrsTcgPlugin extends Plugin
 		HashSet<CardCollectionKey> preOwned = new HashSet<>(stateService.getState().getCollectionState().getOwnedCards().keySet());
 		boolean showScrollWheelHint = stateService.getState().getEconomyState().getOpenedPacks() == 0L;
 		var result = forcedApex
-			? packOpeningService.buyAndOpenApexPackForDebug(packCatalog.getBoosters().get(0))
-			: packOpeningService.buyAndOpenPack(packCatalog.getBoosters().get(0));
+			? packOpeningService.buyAndOpenApexPackForDebug(visibleBoosters.get(0))
+			: packOpeningService.buyAndOpenPack(visibleBoosters.get(0));
 		if (!result.isSuccess())
 		{
 			tcgPanel.clearPackRevealSidebarFreeze();

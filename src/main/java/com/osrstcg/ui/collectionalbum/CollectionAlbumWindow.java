@@ -724,7 +724,7 @@ public final class CollectionAlbumWindow extends JFrame
 	{
 		List<TabFilter> out = new ArrayList<>();
 		out.add(new TabFilter("All", CollectionAlbumWindow::hasCardName));
-		for (BoosterPackDefinition b : packCatalog.getBoosters())
+		for (BoosterPackDefinition b : packCatalog.getVisibleBoosters(stateService.isDebugLogging()))
 		{
 			if (b == null)
 			{

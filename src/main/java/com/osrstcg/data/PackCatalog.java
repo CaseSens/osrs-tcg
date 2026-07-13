@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
@@ -38,30 +39,40 @@ public class PackCatalog
 			return;
 		}
 
-		try (Reader reader = openClasspathReader())
-		{
-			if (reader == null)
-			{
-				boosters = Collections.emptyList();
-				loaded = true;
-				return;
-			}
-			List<BoosterPackDefinition> parsed = gson.fromJson(reader, PACK_LIST_TYPE);
-			boosters = parsed == null ? Collections.emptyList() : Collections.unmodifiableList(parsed);
-			loaded = true;
-			log.info("Loaded {} booster pack definitions from Packs.json", boosters.size());
-		}
-		catch (IOException | JsonSyntaxException ex)
-		{
-			log.warn("Failed reading Packs.json from classpath", ex);
-			boosters = Collections.emptyList();
-			loaded = true;
-		}
+		List<BoosterPackDefinition> merged = new ArrayList<>();
+		int fromMain = appendPackResource(merged, "/Packs.json", false);
+		int fromDebug = appendPackResource(merged, "/PacksDebug.json", true);
+		boosters = Collections.unmodifiableList(merged);
+		loaded = true;
+		log.info("Loaded {} booster pack definitions ({} from Packs.json, {} from PacksDebug.json)",
+			boosters.size(), fromMain, fromDebug);
 	}
 
 	public synchronized List<BoosterPackDefinition> getBoosters()
 	{
 		return boosters;
+	}
+
+	/** Production packs plus {@code debugOnly} entries when {@code debugLogging} is enabled. */
+	public synchronized List<BoosterPackDefinition> getVisibleBoosters(boolean debugLogging)
+	{
+		if (boosters.isEmpty())
+		{
+			return boosters;
+		}
+		List<BoosterPackDefinition> visible = new ArrayList<>();
+		for (BoosterPackDefinition booster : boosters)
+		{
+			if (booster == null)
+			{
+				continue;
+			}
+			if (!booster.isDebugOnly() || debugLogging)
+			{
+				visible.add(booster);
+			}
+		}
+		return Collections.unmodifiableList(visible);
 	}
 
 	public synchronized void setBoostersForTesting(List<BoosterPackDefinition> testBoosters)
@@ -70,12 +81,51 @@ public class PackCatalog
 		loaded = true;
 	}
 
-	private Reader openClasspathReader()
+	private int appendPackResource(List<BoosterPackDefinition> target, String resourcePath, boolean markDebugOnly)
 	{
-		InputStream stream = getClass().getResourceAsStream("/Packs.json");
+		try (Reader reader = openClasspathReader(resourcePath))
+		{
+			if (reader == null)
+			{
+				return 0;
+			}
+			List<BoosterPackDefinition> parsed = gson.fromJson(reader, PACK_LIST_TYPE);
+			if (parsed == null || parsed.isEmpty())
+			{
+				return 0;
+			}
+			int count = 0;
+			for (BoosterPackDefinition booster : parsed)
+			{
+				if (booster == null)
+				{
+					continue;
+				}
+				if (markDebugOnly)
+				{
+					booster.setDebugOnly(true);
+				}
+				target.add(booster);
+				count++;
+			}
+			return count;
+		}
+		catch (IOException | JsonSyntaxException ex)
+		{
+			log.warn("Failed reading {} from classpath", resourcePath, ex);
+			return 0;
+		}
+	}
+
+	private Reader openClasspathReader(String resourcePath)
+	{
+		InputStream stream = getClass().getResourceAsStream(resourcePath);
 		if (stream == null)
 		{
-			log.warn("Packs.json resource missing from plugin classpath");
+			if ("/Packs.json".equals(resourcePath))
+			{
+				log.warn("Packs.json resource missing from plugin classpath");
+			}
 			return null;
 		}
 		return new InputStreamReader(stream, StandardCharsets.UTF_8);

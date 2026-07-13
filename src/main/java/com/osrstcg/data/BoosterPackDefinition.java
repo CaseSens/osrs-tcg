@@ -17,6 +17,8 @@ public class BoosterPackDefinition
 	private List<String> category;
 	private int price;
 	private String thumbnail;
+	/** When true, pack is only listed and openable while debug logging is enabled. */
+	private boolean debugOnly;
 
 	public List<String> getCategoryFilters()
 	{
