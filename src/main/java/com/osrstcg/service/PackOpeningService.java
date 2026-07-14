@@ -90,7 +90,11 @@ public class PackOpeningService
 
 		if (packSafeModeService != null && packSafeModeService.isPackOpeningBlocked())
 		{
-			return PackOpenResult.failed("Cannot open packs while in combat (Safe-mode).", creditsBefore, booster.getPrice());
+			String blockMessage = packSafeModeService.packOpeningBlockMessage();
+			return PackOpenResult.failed(
+				blockMessage == null ? "Cannot open packs right now." : blockMessage,
+				creditsBefore,
+				booster.getPrice());
 		}
 
 		if (isDebugOnlyRegionalPack(booster) && !stateService.isDebugLogging())

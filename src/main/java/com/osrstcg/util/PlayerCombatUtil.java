@@ -4,6 +4,7 @@ import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
+import net.runelite.api.WorldView;
 
 /**
  * Detects whether the local player is in active combat: attacking a player/NPC or being targeted by one.
@@ -32,19 +33,23 @@ public final class PlayerCombatUtil
 			return true;
 		}
 
-		for (NPC npc : client.getNpcs())
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView != null)
 		{
-			if (npc != null && !PetNpcIds.isPetNpc(npc) && npc.getInteracting() == local)
+			for (NPC npc : worldView.npcs())
 			{
-				return true;
+				if (npc != null && !PetNpcIds.isPetNpc(npc) && npc.getInteracting() == local)
+				{
+					return true;
+				}
 			}
-		}
 
-		for (Player other : client.getPlayers())
-		{
-			if (other != null && other != local && other.getInteracting() == local)
+			for (Player other : worldView.players())
 			{
-				return true;
+				if (other != null && other != local && other.getInteracting() == local)
+				{
+					return true;
+				}
 			}
 		}
 

@@ -453,7 +453,7 @@ public class TcgPanel extends PluginPanel
 		{
 			packsContent.removeAll();
 			renderPacksTabFromPackClose(packsContent, snap, shopRows);
-			contentLayout.show(content, Tab.SHOP.name());
+			showTabContent(Tab.SHOP);
 		}
 		else if (selectedTab == Tab.WELCOME)
 		{
@@ -712,7 +712,7 @@ public class TcgPanel extends PluginPanel
 					renderPacksTab(activePanel);
 					shopBuiltForActiveReveal = true;
 				}
-				contentLayout.show(content, selectedTab.name());
+				showTabContent(Tab.SHOP);
 				return;
 			}
 			log.warn("Unsupported tab {}", selectedTab);
@@ -736,7 +736,18 @@ public class TcgPanel extends PluginPanel
 			default:
 				log.warn("Unsupported tab {}", selectedTab);
 		}
-		contentLayout.show(content, selectedTab.name());
+		showTabContent(selectedTab);
+	}
+
+	private void showTabContent(Tab tab)
+	{
+		contentLayout.show(content, tab.name());
+		if (tab == Tab.SHOP)
+		{
+			shopScrollPane.getViewport().revalidate();
+			shopScrollPane.revalidate();
+			shopScrollPane.repaint();
+		}
 	}
 
 	private JPanel panelForTab(Tab tab)
@@ -1565,16 +1576,17 @@ public class TcgPanel extends PluginPanel
 		grid.setAlignmentX(LEFT_ALIGNMENT);
 
 		boolean revealBusy = packRevealService.isActive();
-		boolean combatBlocked = packSafeModeService.isPackOpeningBlocked();
+		boolean packOpeningBlocked = packSafeModeService.isPackOpeningBlocked();
 		long credits = displaySnap.credits;
 		for (BoosterPackDefinition booster : boosters)
 		{
 			JButton buy = createBoosterBuyButton(booster, allCards, rollPool, owned);
 			int price = booster.getPrice();
-			buy.setEnabled(!revealBusy && !combatBlocked && credits >= price);
-			if (combatBlocked)
+			buy.setEnabled(!revealBusy && !packOpeningBlocked && credits >= price);
+			if (packOpeningBlocked)
 			{
-				buy.setToolTipText("Safe-mode: cannot open packs while in combat.");
+				String blockMessage = packSafeModeService.packOpeningBlockMessage();
+				buy.setToolTipText(blockMessage == null ? null : blockMessage);
 			}
 			else
 			{
@@ -1665,10 +1677,11 @@ public class TcgPanel extends PluginPanel
 			}
 			if (packSafeModeService.isPackOpeningBlocked())
 			{
-				if (client != null)
+				String blockMessage = packSafeModeService.packOpeningBlockMessage();
+				if (client != null && blockMessage != null)
 				{
 					client.addChatMessage(ChatMessageType.GAMEMESSAGE, "",
-						"[OSRS TCG] Cannot open packs while in combat (Safe-mode).", null);
+						"[OSRS TCG] " + blockMessage, null);
 				}
 				refresh();
 				return;

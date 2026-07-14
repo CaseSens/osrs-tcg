@@ -5,12 +5,14 @@ import com.osrstcg.data.CardDatabase;
 import com.osrstcg.model.PackCardResult;
 import com.osrstcg.service.PackRevealService.RevealCard;
 import com.osrstcg.ui.TcgPanel;
+import com.osrstcg.util.GameWidgetUtil;
 import com.osrstcg.util.TcgPluginGameMessages;
 import java.awt.Color;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
+import net.runelite.api.Client;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.HitsplatApplied;
 import net.runelite.api.events.InteractingChanged;
@@ -24,6 +26,7 @@ import net.runelite.client.eventbus.Subscribe;
 public final class PackSafeModeService
 {
 	private final OsrsTcgConfig config;
+	private final Client client;
 	private final PlayerCombatMonitor combatMonitor;
 	private final PackRevealService packRevealService;
 	private final CardDatabase cardDatabase;
@@ -31,10 +34,13 @@ public final class PackSafeModeService
 	private final Provider<TcgPanel> tcgPanelProvider;
 
 	private boolean combatStateLastTick;
+	private boolean welcomeScreenVisibleLastTick;
+	private volatile boolean welcomeScreenVisible;
 
 	@Inject
 	public PackSafeModeService(
 		OsrsTcgConfig config,
+		Client client,
 		PlayerCombatMonitor combatMonitor,
 		PackRevealService packRevealService,
 		CardDatabase cardDatabase,
@@ -42,6 +48,7 @@ public final class PackSafeModeService
 		Provider<TcgPanel> tcgPanelProvider)
 	{
 		this.config = config;
+		this.client = client;
 		this.combatMonitor = combatMonitor;
 		this.packRevealService = packRevealService;
 		this.cardDatabase = cardDatabase;
@@ -56,7 +63,30 @@ public final class PackSafeModeService
 
 	public boolean isPackOpeningBlocked()
 	{
+		return isPackOpeningBlockedByWelcomeScreen() || isPackOpeningBlockedByCombat();
+	}
+
+	public boolean isPackOpeningBlockedByCombat()
+	{
 		return config.safeMode() && combatMonitor.isLocalPlayerInCombat();
+	}
+
+	public boolean isPackOpeningBlockedByWelcomeScreen()
+	{
+		return welcomeScreenVisible;
+	}
+
+	public String packOpeningBlockMessage()
+	{
+		if (isPackOpeningBlockedByWelcomeScreen())
+		{
+			return "Cannot open packs on the welcome screen.";
+		}
+		if (isPackOpeningBlockedByCombat())
+		{
+			return "Cannot open packs while in combat (Safe-mode).";
+		}
+		return null;
 	}
 
 	@Subscribe
@@ -83,6 +113,14 @@ public final class PackSafeModeService
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		boolean welcomeScreenVisibleNow = GameWidgetUtil.isWelcomeScreenVisible(client);
+		welcomeScreenVisible = welcomeScreenVisibleNow;
+		if (welcomeScreenVisibleNow != welcomeScreenVisibleLastTick)
+		{
+			welcomeScreenVisibleLastTick = welcomeScreenVisibleNow;
+			tcgPanelProvider.get().refresh();
+		}
+
 		if (!config.safeMode())
 		{
 			if (combatStateLastTick)
