@@ -1636,7 +1636,6 @@ public class TcgPanel extends PluginPanel
 
 		JLabel titleLabel = shopBoosterTextLabel(htmlEscape(title));
 		content.add(titleLabel);
-		content.add(shopBoosterTextLabel(format(price) + " credits"));
 
 		URL packIconUrl = shopPackIconUrl(booster);
 		if (packIconUrl != null)
@@ -1646,6 +1645,8 @@ public class TcgPanel extends PluginPanel
 			iconLabel.setBorder(new EmptyBorder(0, 0, 5, 0));
 			content.add(iconLabel);
 		}
+
+		content.add(shopBoosterTextLabel(format(price) + " credits"));
 
 		content.add(new ShopPackProgressBar(SHOP_PROGRESS_BAR_WIDTH_PX, progressOwn, progressFoilOwn, progressTotal));
 		content.add(shopBoosterTextLabel(format(progressOwn) + " / " + format(progressTotal)));
