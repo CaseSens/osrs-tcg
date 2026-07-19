@@ -32,8 +32,7 @@ public final class NpcKillCreditTracker
 	/** Boss display name -> NPC ids that count as the real kill (final phase only). */
 	private static final Map<String, Set<Integer>> FINAL_PHASE_IDS = Map.ofEntries(
 		Map.entry("Kalphite Queen", Set.of(965)),
-		Map.entry("Kephri", Set.of(11722)),
-		Map.entry("Verzik Vitur", Set.of(10832, 8371, 10849))
+		Map.entry("Kephri", Set.of(11722))
 	);
 
 	/** Kill-credit exclusions: exact name, name fragment (with optional exception), or NPC id. */
@@ -48,6 +47,7 @@ public final class NpcKillCreditTracker
 		NpcExclusionRule.npcIds(ExcludedNpcIds.AMOXLIATL_UNSTABLE_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.CRACKED_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.GREAT_OLM),
+		NpcExclusionRule.exactName("Verzik Vitur"),
 		NpcExclusionRule.exactName("The Nightmare"),
 		NpcExclusionRule.exactName("Phosani's Nightmare"),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.THE_NIGHTMARE),
