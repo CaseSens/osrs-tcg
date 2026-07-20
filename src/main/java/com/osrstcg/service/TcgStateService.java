@@ -33,6 +33,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TcgStateService
 {
+	private static final long FILE_BACKUP_THROTTLE_MS = 5L * 60L * 1000L;
+
 	private final TcgStateStore stateStore;
 	private final boolean runeliteDeveloperMode;
 	private final Provider<OsrsTcgConfig> config;
@@ -41,6 +43,7 @@ public class TcgStateService
 	private volatile TcgState state = TcgState.empty();
 	private Runnable rewardTuningFlushBeforeCredits;
 	private final CopyOnWriteArrayList<Runnable> collectionChangeListeners = new CopyOnWriteArrayList<>();
+	private long lastFileBackupEpochMs;
 
 	@Inject
 	public TcgStateService(
@@ -79,6 +82,8 @@ public class TcgStateService
 
 		TcgStateLoadResult result = stateStore.load();
 		state = result.getState();
+		// Allow a file backup soon after login; plugin start may have already written one.
+		lastFileBackupEpochMs = 0L;
 		if (shouldResetDebugTaintedSave())
 		{
 			log.info("OSRS TCG: loaded profile had debug mode enabled; resetting collection and economy.");
@@ -107,7 +112,7 @@ public class TcgStateService
 		}
 		if (strippedDebug || upgradedSkillBaseline || upgradedProfileMeta)
 		{
-			save();
+			saveToProfile();
 			if (strippedDebug)
 			{
 				notifyCollectionShareListeners();
@@ -118,7 +123,8 @@ public class TcgStateService
 	}
 
 	/**
-	 * Restores the most recent valid on-disk backup into memory and writes it to profile configuration.
+	 * Restores the most recent valid on-disk backup into memory and writes profile configuration
+	 * plus a file backup.
 	 *
 	 * @return true if a backup was loaded
 	 */
@@ -154,7 +160,7 @@ public class TcgStateService
 			state = state.withSkillCreditBaseline(SkillCreditBaseline.absent());
 		}
 		ensureProfileMetaSchemaFields();
-		save();
+		saveToProfile();
 		if (strippedDebug)
 		{
 			notifyCollectionShareListeners();
@@ -206,7 +212,7 @@ public class TcgStateService
 	}
 
 	/**
-	 * Persists the current in-memory state to profile configuration and a validated on-disk backup file.
+	 * Persists the current in-memory state to a validated on-disk backup file without writing profile configuration.
 	 *
 	 * @return true if the file backup was written
 	 */
@@ -218,18 +224,54 @@ public class TcgStateService
 			return false;
 		}
 
-		save();
-		return stateStore.saveToFileBackup(state);
+		boolean written = stateStore.saveToFileBackup(state);
+		if (written)
+		{
+			lastFileBackupEpochMs = System.currentTimeMillis();
+		}
+		return written;
 	}
 
-	public synchronized void save()
+	/**
+	 * Writes the current in-memory state to RuneLite profile configuration and a file backup.
+	 * Used on logout, plugin unload, collection reset, and manual file-backup restore.
+	 */
+	public synchronized void saveToProfile()
 	{
+		flushRewardTuningDraftBeforeLocking();
 		if (stateStore == null)
 		{
 			return;
 		}
 		state = state.withProfileSavedAtUnix(TcgState.currentUnixSeconds());
 		stateStore.save(state);
+		if (stateStore.saveToFileBackup(state))
+		{
+			lastFileBackupEpochMs = System.currentTimeMillis();
+		}
+	}
+
+	/**
+	 * Throttled on-disk file backup (at most once per 5 minutes). Does not write RuneLite profile
+	 * configuration; that happens via {@link #saveToProfile()}.
+	 */
+	public synchronized void save()
+	{
+		if (stateStore == null)
+		{
+			return;
+		}
+
+		long now = System.currentTimeMillis();
+		if (now - lastFileBackupEpochMs < FILE_BACKUP_THROTTLE_MS)
+		{
+			return;
+		}
+
+		if (stateStore.saveToFileBackup(state))
+		{
+			lastFileBackupEpochMs = now;
+		}
 	}
 
 	/** Invoked after share-relevant collection / pack mutations (web sync, interop broadcasts). */
@@ -592,7 +634,7 @@ public class TcgStateService
 	public synchronized void resetAll()
 	{
 		state = TcgState.empty();
-		save();
+		saveToProfile();
 		notifyCollectionShareListeners();
 	}
 

@@ -80,7 +80,10 @@ public interface OsrsTcgConfig extends Config
 	@ConfigItem(
 		keyName = "enableFileBackups",
 		name = "Backups",
-		description = "Save backup copies of your collection.",
+		description = "Keep up to 50 file backups under .runelite/OSRS-TCG/backups. "
+			+ "Written at most every 5 minutes while playing, and on logout, plugin load/unload, and ::tcg-save. "
+			+ "Preferred on load when newer than the profile configuration timestamp; "
+			+ "also used when profile configuration saves fail to load.",
 		section = generalSection,
 		position = 5
 	)
