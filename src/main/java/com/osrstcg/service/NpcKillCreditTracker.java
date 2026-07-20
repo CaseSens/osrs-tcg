@@ -47,7 +47,7 @@ public final class NpcKillCreditTracker
 		NpcExclusionRule.npcIds(ExcludedNpcIds.AMOXLIATL_UNSTABLE_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.CRACKED_ICE),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.GREAT_OLM),
-		NpcExclusionRule.exactName("Verzik Vitur"),
+		NpcExclusionRule.npcIds(ExcludedNpcIds.THEATRE_OF_BLOOD),
 		NpcExclusionRule.exactName("The Nightmare"),
 		NpcExclusionRule.exactName("Phosani's Nightmare"),
 		NpcExclusionRule.npcIds(ExcludedNpcIds.THE_NIGHTMARE),
@@ -275,6 +275,26 @@ public final class NpcKillCreditTracker
 
 		/** Great Olm — head and claws, normal and challenge mode (kill credits via {@link GameMessageCreditTracker}). */
 		static final Set<Integer> GREAT_OLM = Set.of(7550, 7551, 7552, 7553, 7554, 7555);
+
+		/**
+		 * Theatre of Blood — every NPC inside the raid, all difficulty modes (kill credits via
+		 * {@link GameMessageCreditTracker}). Unlike CoX, whose party-scaled room monsters have no
+		 * combat level and are already skipped by the level check in
+		 * {@link CreditAwardService#awardNpcKillCredits}, ToB monsters have fixed combat levels, so
+		 * the whole raid must be excluded by id. The raid's NPCs occupy two contiguous gameval id
+		 * blocks: TOB_XARPUS_STATIC (8338) through TOB_SOTETSEG_CREEPER (8389) for Normal Mode, and
+		 * TOB_XARPUS_STATIC_STORY (10766) through TOB_SOTETSEG_CREEPER_HARD (10869) for Entry and
+		 * Hard Mode. Ids adjacent to the blocks are pets and lobby NPCs; quest-only variants
+		 * (TOBQUEST_*) are intentionally not excluded.
+		 */
+		static final Set<Integer> THEATRE_OF_BLOOD = java.util.stream.IntStream
+			.concat(
+				// Normal Mode
+				java.util.stream.IntStream.rangeClosed(8338, 8389),
+				// Entry Mode and Hard Mode
+				java.util.stream.IntStream.rangeClosed(10766, 10869))
+			.boxed()
+			.collect(java.util.stream.Collectors.toUnmodifiableSet());
 
 		/** The Nightmare — minions and non-kill phases (kill credits via {@link GameMessageCreditTracker}). */
 		static final Set<Integer> THE_NIGHTMARE = Set.of(
