@@ -87,7 +87,7 @@ public interface OsrsTcgConfig extends Config
 	)
 	default boolean packRarityText()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(
