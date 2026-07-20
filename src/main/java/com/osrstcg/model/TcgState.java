@@ -4,7 +4,7 @@ import com.osrstcg.util.PackRevealZoomUtil;
 
 public final class TcgState
 {
-	public static final int CURRENT_SCHEMA_VERSION = 5;
+	public static final int CURRENT_SCHEMA_VERSION = 6;
 
 	private final int schemaVersion;
 	private final EconomyState economyState;

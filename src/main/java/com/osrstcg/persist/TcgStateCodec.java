@@ -2,6 +2,8 @@ package com.osrstcg.persist;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import com.osrstcg.model.CardEntry;
+import com.osrstcg.model.CardEntrySerializer;
 import com.osrstcg.model.CollectionState;
 import com.osrstcg.model.EconomyState;
 import com.osrstcg.model.OwnedCardInstance;
@@ -63,21 +65,7 @@ public class TcgStateCodec
 
 	private TcgState parseSerializedState(SerializedState stored)
 	{
-		List<OwnedCardInstance> rows = new ArrayList<>();
-		if (stored.cardInstances != null)
-		{
-			for (SerializedInstance row : stored.cardInstances)
-			{
-				if (row == null || row.cardName == null || row.cardName.trim().isEmpty())
-				{
-					continue;
-				}
-				String id = row.id == null || row.id.trim().isEmpty() ? null : row.id.trim();
-				String by = row.pulledBy == null ? "" : row.pulledBy;
-				long at = row.pulledAt <= 0L ? 0L : row.pulledAt;
-				rows.add(new OwnedCardInstance(id, row.cardName.trim(), row.foil, by, at, row.locked));
-			}
-		}
+		List<OwnedCardInstance> rows = parseCollectionRows(stored);
 		CollectionState coll = CollectionState.copyOf(rows);
 
 		RewardTuningState tuning = RewardTuningState.mergeSerialized(
@@ -116,6 +104,36 @@ public class TcgStateCodec
 		);
 	}
 
+	private static List<OwnedCardInstance> parseCollectionRows(SerializedState stored)
+	{
+		if (stored.cardEntries != null && !stored.cardEntries.isEmpty())
+		{
+			return CardEntrySerializer.expandToInstances(stored.cardEntries);
+		}
+		return parseLegacyCardInstances(stored.cardInstances);
+	}
+
+	private static List<OwnedCardInstance> parseLegacyCardInstances(List<SerializedInstance> cardInstances)
+	{
+		List<OwnedCardInstance> rows = new ArrayList<>();
+		if (cardInstances == null)
+		{
+			return rows;
+		}
+		for (SerializedInstance row : cardInstances)
+		{
+			if (row == null || row.cardName == null || row.cardName.trim().isEmpty())
+			{
+				continue;
+			}
+			String id = row.id == null || row.id.trim().isEmpty() ? null : row.id.trim();
+			String by = row.pulledBy == null ? "" : row.pulledBy;
+			long at = row.pulledAt <= 0L ? 0L : row.pulledAt;
+			rows.add(new OwnedCardInstance(id, row.cardName.trim(), row.foil, by, at, row.locked));
+		}
+		return rows;
+	}
+
 	public String toJson(TcgState state)
 	{
 		TcgState s = Objects.requireNonNullElse(state, TcgState.empty());
@@ -123,7 +141,8 @@ public class TcgStateCodec
 		serialized.schemaVersion = TcgState.CURRENT_SCHEMA_VERSION;
 		serialized.credits = s.getEconomyState().getCredits();
 		serialized.openedPacks = s.getEconomyState().getOpenedPacks();
-		serialized.cardInstances = new ArrayList<>();
+		serialized.cardEntries = CardEntrySerializer.buildProfileEntries(
+			s.getCollectionState().getOwnedInstances());
 
 		RewardTuningState tuning = s.getRewardTuning();
 		serialized.foilChancePercent = tuning.getFoilChancePercent();
@@ -138,18 +157,6 @@ public class TcgStateCodec
 		serialized.totalCreditsGained = s.getTotalCreditsGained();
 		serialized.profileCreatedAtUnix = s.getProfileCreatedAtUnix();
 		serialized.profileSavedAtUnix = s.getProfileSavedAtUnix();
-
-		for (OwnedCardInstance inst : s.getCollectionState().getOwnedInstances())
-		{
-			SerializedInstance row = new SerializedInstance();
-			row.id = inst.getInstanceId();
-			row.cardName = inst.getCardName();
-			row.foil = inst.isFoil();
-			row.pulledBy = inst.getPulledByUsername();
-			row.pulledAt = inst.getPulledAtEpochMs();
-			row.locked = inst.isLocked();
-			serialized.cardInstances.add(row);
-		}
 
 		return gson.toJson(serialized);
 	}
@@ -205,6 +212,7 @@ public class TcgStateCodec
 		private int schemaVersion = TcgState.CURRENT_SCHEMA_VERSION;
 		private long credits;
 		private long openedPacks;
+		private List<CardEntry> cardEntries;
 		private List<SerializedInstance> cardInstances;
 		private Integer foilChancePercent;
 		private Double killCreditMultiplier;
@@ -226,6 +234,7 @@ public class TcgStateCodec
 		private Long uncreditedXp;
 	}
 
+	/** Legacy schema: one row per owned copy. */
 	private static class SerializedInstance
 	{
 		private String id;

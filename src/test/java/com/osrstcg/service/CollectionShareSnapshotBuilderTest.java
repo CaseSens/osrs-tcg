@@ -1,5 +1,7 @@
 package com.osrstcg.service;
 
+import com.osrstcg.model.CardEntry;
+import com.osrstcg.model.CardVariant;
 import com.osrstcg.model.CollectionState;
 import com.osrstcg.model.OwnedCardInstance;
 import com.osrstcg.model.TcgPublicStats;
@@ -12,7 +14,7 @@ import org.junit.Test;
 public class CollectionShareSnapshotBuilderTest
 {
 	@Test
-	public void aggregateCardsExcludesDebugAndGroupsByNameAndFoil()
+	public void buildCardEntriesExcludesDebugAndGroupsByName()
 	{
 		List<OwnedCardInstance> instances = List.of(
 			OwnedCardInstance.createNew("Abyssal whip", false, "Player", 1000L),
@@ -23,55 +25,43 @@ public class CollectionShareSnapshotBuilderTest
 			OwnedCardInstance.createNew("Twisted bow", false, "DEBUG_Other", 1004L)
 		);
 
-		List<Map<String, Object>> cards = CollectionShareSnapshotBuilder.aggregateCards(
+		List<CardEntry> entries = CollectionShareSnapshotBuilder.buildCardEntries(
 			CollectionState.copyOf(instances));
 
-		Assert.assertEquals(2, cards.size());
+		Assert.assertEquals(1, entries.size());
+		CardEntry whip = entries.get(0);
+		Assert.assertEquals("Abyssal whip", whip.cardName);
+		Assert.assertEquals(3, whip.variants.size());
 
-		Map<String, Object> whip = cards.get(0);
-		Assert.assertEquals("Abyssal whip", whip.get("cardName"));
-		Assert.assertEquals(false, whip.get("foil"));
-		Assert.assertEquals(2, whip.get("quantity"));
-
-		Map<String, Object> whipFoil = cards.get(1);
-		Assert.assertEquals("Abyssal whip", whipFoil.get("cardName"));
-		Assert.assertEquals(true, whipFoil.get("foil"));
-		Assert.assertEquals(1, whipFoil.get("quantity"));
+		Assert.assertFalse(CollectionShareSnapshotBuilder.isFoilVariant(whip.variants.get(0)));
+		Assert.assertFalse(CollectionShareSnapshotBuilder.isFoilVariant(whip.variants.get(1)));
+		Assert.assertTrue(CollectionShareSnapshotBuilder.isFoilVariant(whip.variants.get(2)));
+		Assert.assertEquals(1000L, whip.variants.get(0).pulledAt.longValue());
+		Assert.assertEquals(1001L, whip.variants.get(1).pulledAt.longValue());
+		Assert.assertNull(whip.variants.get(0).foil);
+		Assert.assertEquals(Boolean.TRUE, whip.variants.get(2).foil);
 	}
 
 	@Test
-	public void buildInstancesExcludesDebugAndMapsPullFields()
+	public void buildCardEntriesOmitsEmptyPulledByAndLocked()
 	{
 		OwnedCardInstance whip = OwnedCardInstance.createNew("Abyssal whip", false, "Player", 1000L);
-		OwnedCardInstance foil = OwnedCardInstance.createNew("Abyssal whip", true, "Player", 1002L);
-		OwnedCardInstance debug = OwnedCardInstance.createNew("Dragon scimitar", false,
-			OwnedCardInstance.withDebugPullMetadataPrefix("Player"), 1003L);
 		OwnedCardInstance emptyPuller = OwnedCardInstance.createNew("Rune scimitar", false, "", 50L);
+		OwnedCardInstance locked = OwnedCardInstance.createNew("Rune scimitar", false, "Player", 60L).withLocked(true);
 
-		List<Map<String, Object>> rows = CollectionShareSnapshotBuilder.buildInstances(
-			CollectionState.copyOf(List.of(whip, foil, debug, emptyPuller)));
+		List<CardEntry> entries = CollectionShareSnapshotBuilder.buildCardEntries(
+			CollectionState.copyOf(List.of(whip, emptyPuller, locked)));
 
-		Assert.assertEquals(3, rows.size());
-
-		Map<String, Object> first = rows.get(0);
-		Assert.assertEquals(whip.getInstanceId(), first.get("instanceId"));
-		Assert.assertEquals("Abyssal whip", first.get("cardName"));
-		Assert.assertEquals(false, first.get("foil"));
-		Assert.assertEquals("Player", first.get("pulledBy"));
-		Assert.assertEquals(1000L, first.get("pulledAt"));
-
-		Map<String, Object> second = rows.get(1);
-		Assert.assertEquals(true, second.get("foil"));
-		Assert.assertEquals(1002L, second.get("pulledAt"));
-
-		Map<String, Object> third = rows.get(2);
-		Assert.assertEquals("Rune scimitar", third.get("cardName"));
-		Assert.assertFalse(third.containsKey("pulledBy"));
-		Assert.assertEquals(50L, third.get("pulledAt"));
+		Assert.assertEquals(2, entries.size());
+		CardVariant normal = entries.get(1).variants.get(0);
+		Assert.assertNull(normal.pulledBy);
+		Assert.assertNull(normal.locked);
+		CardVariant lockedVariant = entries.get(1).variants.get(1);
+		Assert.assertNull(lockedVariant.locked);
 	}
 
 	@Test
-	public void buildPayloadIncludesInstancesAndShareSafeFields()
+	public void buildPayloadUsesSchemaV2CardEntries()
 	{
 		OwnedCardInstance owned = OwnedCardInstance.createNew("Rune scimitar", false, "Player", 1L);
 		CollectionState collection = CollectionState.copyOf(List.of(owned));
@@ -84,21 +74,22 @@ public class CollectionShareSnapshotBuilderTest
 			collection,
 			Instant.parse("2026-07-17T00:00:00Z"));
 
-		Assert.assertEquals(1, payload.get("schemaVersion"));
+		Assert.assertEquals(2, payload.get("schemaVersion"));
 		Assert.assertEquals("1.0.0", payload.get("catalogVersion"));
 		Assert.assertEquals("TestPlayer", payload.get("displayName"));
 		Assert.assertEquals("2026-07-17T00:00:00Z", payload.get("updatedAt"));
 		Assert.assertTrue(payload.get("stats") instanceof Map);
-		Assert.assertTrue(payload.get("cards") instanceof List);
-		Assert.assertEquals(1, ((List<?>) payload.get("cards")).size());
-		Assert.assertTrue(payload.get("instances") instanceof List);
-		Assert.assertEquals(1, ((List<?>) payload.get("instances")).size());
+		Assert.assertFalse(payload.containsKey("cards"));
+		Assert.assertFalse(payload.containsKey("instances"));
+		Assert.assertTrue(payload.get("cardEntries") instanceof List);
 
 		@SuppressWarnings("unchecked")
-		Map<String, Object> instance = (Map<String, Object>) ((List<?>) payload.get("instances")).get(0);
-		Assert.assertEquals(owned.getInstanceId(), instance.get("instanceId"));
-		Assert.assertEquals("Player", instance.get("pulledBy"));
-		Assert.assertEquals(1L, instance.get("pulledAt"));
+		List<CardEntry> cardEntries = (List<CardEntry>) payload.get("cardEntries");
+		Assert.assertEquals(1, cardEntries.size());
+		Assert.assertEquals("Rune scimitar", cardEntries.get(0).cardName);
+		Assert.assertEquals(1, cardEntries.get(0).variants.size());
+		Assert.assertEquals("Player", cardEntries.get(0).variants.get(0).pulledBy);
+		Assert.assertEquals(1L, cardEntries.get(0).variants.get(0).pulledAt.longValue());
 
 		@SuppressWarnings("unchecked")
 		Map<String, Object> statsMap = (Map<String, Object>) payload.get("stats");
@@ -108,11 +99,9 @@ public class CollectionShareSnapshotBuilderTest
 	}
 
 	@Test
-	public void aggregateCardsReturnsEmptyForNullOrEmptyCollection()
+	public void buildCardEntriesReturnsEmptyForNullOrEmptyCollection()
 	{
-		Assert.assertTrue(CollectionShareSnapshotBuilder.aggregateCards(null).isEmpty());
-		Assert.assertTrue(CollectionShareSnapshotBuilder.aggregateCards(CollectionState.empty()).isEmpty());
-		Assert.assertTrue(CollectionShareSnapshotBuilder.buildInstances(null).isEmpty());
-		Assert.assertTrue(CollectionShareSnapshotBuilder.buildInstances(CollectionState.empty()).isEmpty());
+		Assert.assertTrue(CollectionShareSnapshotBuilder.buildCardEntries(null).isEmpty());
+		Assert.assertTrue(CollectionShareSnapshotBuilder.buildCardEntries(CollectionState.empty()).isEmpty());
 	}
 }
