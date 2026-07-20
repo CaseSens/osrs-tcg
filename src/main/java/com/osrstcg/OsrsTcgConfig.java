@@ -1,5 +1,6 @@
 package com.osrstcg;
 
+import com.osrstcg.model.DinkNotificationTrigger;
 import com.osrstcg.model.PullNotifyTier;
 import java.awt.Color;
 import net.runelite.client.config.Config;
@@ -209,23 +210,11 @@ public interface OsrsTcgConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "dinkNotifications",
-		name = "Dink",
-		description = "Also send pull alerts to Discord via Dink.",
-		section = pullNotificationsSection,
-		position = 5
-	)
-	default boolean dinkNotifications()
-	{
-		return false;
-	}
-
-	@ConfigItem(
 		keyName = "pullWebhookUrl",
 		name = "Webhook URL",
 		description = "Discord webhook for pull alerts. Leave empty to disable.",
 		section = pullNotificationsSection,
-		position = 6
+		position = 5
 	)
 	default String pullWebhookUrl()
 	{
@@ -233,9 +222,88 @@ public interface OsrsTcgConfig extends Config
 	}
 
 	@ConfigSection(
+		name = "Dink",
+		description = "Send OSRS TCG notifications through Dink.",
+		position = 20
+	)
+	String dinkSection = "dink";
+
+	@ConfigItem(
+		keyName = "dinkNotifications",
+		name = "Enable Dink Notifications",
+		description = "Send notable pull alerts to Discord via Dink.",
+		section = dinkSection,
+		position = 0
+	)
+	default boolean dinkNotifications()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "dinkNotificationTrigger",
+		name = "Trigger notification",
+		description = "Send Dink notifications as each card is revealed or after the whole pack is revealed.",
+		section = dinkSection,
+		position = 1
+	)
+	default DinkNotificationTrigger dinkNotificationTrigger()
+	{
+		return DinkNotificationTrigger.EVERY_CARD;
+	}
+
+	@ConfigItem(
+		keyName = "dinkNewCardNotifyTier",
+		name = "New card rank threshold",
+		description = "Minimum card rank for new-card Dink notifications.",
+		section = dinkSection,
+		position = 2
+	)
+	default PullNotifyTier dinkNewCardNotifyTier()
+	{
+		return PullNotifyTier.MYTHIC;
+	}
+
+	@ConfigItem(
+		keyName = "dinkNotifyDuplicates",
+		name = "Notify duplicate cards",
+		description = "Send Dink notifications for duplicate cards at or above the selected rank threshold.",
+		section = dinkSection,
+		position = 3
+	)
+	default boolean dinkNotifyDuplicates()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "dinkDuplicateNotifyTier",
+		name = "Duplicate rank threshold",
+		description = "Minimum card rank for duplicate Dink notifications.",
+		section = dinkSection,
+		position = 4
+	)
+	default PullNotifyTier dinkDuplicateNotifyTier()
+	{
+		return PullNotifyTier.MYTHIC;
+	}
+
+	@ConfigItem(
+		keyName = "dinkAlwaysNotifyFoils",
+		name = "Always notify foils",
+		description = "Notify for foils regardless of rank. When disabled, foils must meet the relevant rank threshold.",
+		section = dinkSection,
+		position = 5
+	)
+	default boolean dinkAlwaysNotifyFoils()
+	{
+		return true;
+	}
+
+	@ConfigSection(
 		name = "Web album",
 		description = "Share your collection online via osrs-tcg.xyz.",
-		position = 20
+		position = 30
 	)
 	String webAlbumSection = "webAlbum";
 

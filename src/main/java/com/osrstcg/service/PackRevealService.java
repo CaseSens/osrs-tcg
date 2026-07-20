@@ -158,6 +158,7 @@ public class PackRevealService
 	private List<RevealCard> cards = List.of();
 	private int revealedCount;
 	private boolean[] revealedByIndex = new boolean[0];
+	private boolean dinkEndNotificationsSent;
 	private long phaseStartedAt;
 	private int cardPoolSize;
 	private final Map<String, RarityMath.Tier> rarityTierByCardName = new HashMap<>();
@@ -265,6 +266,7 @@ public class PackRevealService
 			.collect(Collectors.toList()));
 		this.revealedCount = 0;
 		this.revealedByIndex = new boolean[this.cards.size()];
+		this.dinkEndNotificationsSent = false;
 		this.phaseStartedAt = 0L;
 		this.phase = cards.isEmpty() ? Phase.IDLE : Phase.PACK_READY;
 	}
@@ -311,13 +313,11 @@ public class PackRevealService
 				{
 					packRevealSoundService.playMythicReveal();
 				}
-				if (pullNotificationService.shouldNotify(clicked.getTier(), isFoilPull(clicked), clicked.isNew()))
-				{
-					pullNotificationService.notifyPull(
-						cardNameForParty(clicked), clicked.isNew(), isFoilPull(clicked), clicked.getTier());
-				}
+				pullNotificationService.notifyPull(
+					cardNameForParty(clicked), clicked.isNew(), isFoilPull(clicked), clicked.getTier());
 				if (revealedCount >= cards.size())
 				{
+					notifyDinkAtEndOnce();
 					phase = Phase.WAIT_CLOSE;
 					phaseStartedAt = System.currentTimeMillis();
 				}
@@ -395,6 +395,7 @@ public class PackRevealService
 		{
 			revealedByIndex[i] = true;
 		}
+		notifyDinkAtEndOnce();
 		phase = Phase.WAIT_CLOSE;
 		phaseStartedAt = System.currentTimeMillis();
 	}
@@ -414,6 +415,7 @@ public class PackRevealService
 		}
 		else if (phase == Phase.CARD_REVEAL && allRevealSlotsFaceUp())
 		{
+			notifyDinkAtEndOnce();
 			phase = Phase.WAIT_CLOSE;
 			phaseStartedAt = System.currentTimeMillis();
 		}
@@ -552,6 +554,7 @@ public class PackRevealService
 		cards = List.of();
 		revealedCount = 0;
 		revealedByIndex = new boolean[0];
+		dinkEndNotificationsSent = false;
 		phaseStartedAt = 0L;
 		cardPoolSize = 0;
 		boosterDisplayName = "";
@@ -682,12 +685,19 @@ public class PackRevealService
 				continue;
 			}
 			RevealCard card = cards.get(i);
-			if (pullNotificationService.shouldNotify(card.getTier(), isFoilPull(card), card.isNew()))
-			{
-				pullNotificationService.notifyPull(
-					cardNameForParty(card), card.isNew(), isFoilPull(card), card.getTier());
-			}
+			pullNotificationService.notifyPull(
+				cardNameForParty(card), card.isNew(), isFoilPull(card), card.getTier());
 		}
+	}
+
+	private void notifyDinkAtEndOnce()
+	{
+		if (dinkEndNotificationsSent)
+		{
+			return;
+		}
+		dinkEndNotificationsSent = true;
+		pullNotificationService.notifyDinkAtEnd(cards);
 	}
 
 	/**
