@@ -242,24 +242,6 @@ final class CollectionAlbumGridPanel extends JPanel
 		return false;
 	}
 
-	/** True when a visible card image is still loading from cache. */
-	boolean needsImageLoadRepaint()
-	{
-		for (AlbumSlot s : slots)
-		{
-			if (s == null || s.card() == null)
-			{
-				continue;
-			}
-			String url = s.card().getImageUrl();
-			if (url != null && !url.trim().isEmpty() && imageCacheService.needsLoad(url))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
 	@Override
 	public String getToolTipText(MouseEvent event)
 	{
